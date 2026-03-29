@@ -1,0 +1,331 @@
+/* Mobile Responsive Styles */
+
+/* Base mobile adjustments */
+@media (max-width: 768px) {
+  /* Header adjustments */
+  .header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .header-nav {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .nav-button {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .user-info {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  /* Schedule adjustments */
+  .schedule-container {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .schedule-header {
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .schedule-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .date-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .current-date {
+    font-size: 0.95rem;
+    padding: 0 8px;
+  }
+
+  .filters {
+    width: 100%;
+  }
+
+  .filters select {
+    width: 100%;
+  }
+
+  .schedule-toolbar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .drag-hint {
+    text-align: center;
+  }
+
+  /* Zoom controls */
+  .zoom-controls {
+    padding: 4px 8px;
+  }
+
+  .zoom-controls button {
+    min-width: 36px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  .zoom-label {
+    font-size: 0.7rem;
+  }
+
+  /* Grid wrapper - enable horizontal scroll */
+  .schedule-grid-wrapper {
+    border-radius: 12px;
+  }
+
+  .resource-header,
+  .resource-info {
+    min-width: 100px;
+    width: 100px;
+    padding: 0 8px;
+    font-size: 0.65rem;
+  }
+
+  .resource-tail {
+    font-size: 0.6rem;
+  }
+
+  .resource-model,
+  .resource-rate {
+    font-size: 0.55rem;
+  }
+
+  /* Auth pages */
+  .auth-card {
+    margin: 16px;
+    padding: 24px 20px;
+  }
+
+  .auth-title {
+    font-size: 1.3rem;
+  }
+
+  /* Profile page */
+  .profile-container {
+    padding: 16px;
+  }
+
+  .profile-card {
+    padding: 20px;
+  }
+
+  /* Admin panel */
+  .admin-panel {
+    padding: 16px;
+  }
+
+  .admin-nav {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .admin-nav button {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .admin-card {
+    padding: 16px;
+  }
+
+  .admin-table {
+    font-size: 0.8rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 8px 10px;
+  }
+
+  /* Modal adjustments */
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .booking-form {
+    padding: 16px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .booking-form .form-group {
+    margin-bottom: 12px;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .form-actions button {
+    flex: 1 1 auto;
+    min-width: 100px;
+  }
+
+  /* My Bookings page */
+  .my-bookings-container {
+    padding: 16px;
+  }
+
+  .booking-card {
+    padding: 16px;
+  }
+}
+
+/* Small mobile adjustments */
+@media (max-width: 480px) {
+  .header-logo img {
+    height: 40px;
+  }
+
+  .schedule-header {
+    padding: 10px;
+  }
+
+  .new-booking-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  .date-nav button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .resource-header,
+  .resource-info {
+    min-width: 80px;
+    width: 80px;
+  }
+
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-close {
+    font-size: 1.5rem;
+  }
+
+  .auth-card {
+    padding: 20px 16px;
+  }
+
+  .booking-form input,
+  .booking-form select,
+  .booking-form textarea {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .schedule-header {
+    padding: 14px 18px;
+  }
+
+  .resource-header,
+  .resource-info {
+    min-width: 140px;
+    width: 140px;
+  }
+
+  .admin-nav {
+    gap: 8px;
+  }
+}
+
+/* Landscape phone */
+@media (max-width: 812px) and (orientation: landscape) {
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-content {
+    max-height: 98vh;
+  }
+
+  .booking-form {
+    padding: 12px;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  .nav-button,
+  .new-booking-btn,
+  .date-nav button,
+  .zoom-controls button,
+  .form-actions button {
+    min-height: 44px;
+  }
+
+  .time-slot {
+    min-height: 44px;
+  }
+
+  .booking-block {
+    min-height: 36px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .header,
+  .schedule-toolbar,
+  .schedule-nav,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  .schedule-grid-wrapper {
+    overflow: visible;
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+
+  .app-content {
+    overflow: visible;
+  }
+}

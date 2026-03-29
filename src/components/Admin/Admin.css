@@ -1,0 +1,454 @@
+.admin-section {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  margin: 24px;
+  border: 1px solid #e6ebf2;
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.05);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.user-count {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.btn-add {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-add:hover {
+  background: #15803d;
+}
+
+/* Admin Form */
+.admin-form {
+  background: #fbfcfe;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid #e6ebf2;
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.admin-form .form-group {
+  margin-bottom: 0;
+}
+
+.admin-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #444;
+  font-size: 0.9rem;
+}
+
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.admin-form input:focus,
+.admin-form select:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.08);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Admin Table */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-table th {
+  background: #f7f9fc;
+  font-weight: 600;
+  color: #444;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-table th.sortable:hover {
+  background: #eef2f7;
+}
+
+.admin-table tr:hover {
+  background: #fbfcfe;
+}
+
+.tail-number,
+.user-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.rate {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.hobbs-time {
+  color: #0066cc;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-badge.available {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-badge.maintenance {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-badge.unavailable {
+  background: #f3f4f6;
+  color: #666;
+}
+
+.status-badge.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-badge.completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.role-badge.admin {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.role-badge.user {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit {
+  background: #e5e7eb;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-edit:hover {
+  background: #d1d5db;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #fecaca;
+}
+
+/* Dashboard */
+.admin-dashboard {
+  padding: 28px;
+  background: #ffffff;
+}
+
+.admin-dashboard h2 {
+  margin: 0 0 20px;
+  color: #333;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 24px;
+  border-radius: 18px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e6ebf2;
+  text-align: center;
+}
+
+.stat-card.highlight {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.stat-card.highlight .stat-value {
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.stat-card.highlight .stat-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-error {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 8px;
+}
+
+.form-group-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-mini-calendar-panel {
+  margin-top: 24px;
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e6ebf2;
+}
+
+.admin-mini-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.admin-mini-calendar-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.admin-mini-calendar-header span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-mini-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-mini-day {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  min-height: 220px;
+}
+
+.admin-mini-day-header {
+  padding: 10px 12px;
+  background: #e8edf3;
+  border-bottom: 1px solid #d7dee7;
+}
+
+.admin-mini-day-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.admin-mini-day-date {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.admin-mini-day-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-mini-empty {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.admin-mini-booking-card {
+  background: white;
+  border-left: 3px solid #2563eb;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.admin-mini-booking-time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.admin-mini-booking-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 4px;
+}
+
+.admin-mini-booking-meta {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #0066cc;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #0052a3;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #666;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
+}
+
+@media (max-width: 1200px) {
+  .admin-mini-calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-mini-calendar-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-mini-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-section {
+    margin: 12px;
+    padding: 16px;
+  }
+
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

@@ -1,0 +1,139 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: #e8e8e8;
+  height: 64px;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo {
+  height: 40px;
+  width: auto;
+}
+
+.header-brand h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.header-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.header-nav button {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.header-nav button:hover {
+  background: #d0d0d0;
+  color: #1e293b;
+}
+
+.header-nav button.active {
+  background: #1e40af;
+  color: white;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+}
+
+.admin-badge {
+  background: #f59e0b;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.logout-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: #e2e8f0;
+}
+
+/* Main Layout */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .header-brand {
+    flex: 1;
+  }
+
+  .header-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    justify-content: center;
+  }
+
+  .header-user {
+    order: 2;
+  }
+}

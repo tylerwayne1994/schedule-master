@@ -1,0 +1,159 @@
+/**
+ * Accessibility-focused styles
+ */
+
+/* Skip link - visible only on focus */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: #0066cc;
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 0 0 4px 4px;
+}
+
+.skip-link:focus {
+  left: 16px;
+  top: 0;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Improved focus indicators */
+*:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  *:focus-visible {
+    outline: 3px solid #000;
+    outline-offset: 3px;
+  }
+  
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.9);
+  }
+  
+  .modal-content {
+    border: 2px solid #000;
+  }
+  
+  button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Form validation states */
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+input[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.35);
+  outline: none;
+}
+
+.field-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+/* Improved disabled state styling */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Touch targets for mobile accessibility (min 44x44px) */
+@media (pointer: coarse) {
+  button,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  a {
+    padding: 8px;
+  }
+}
+
+/* Loading state indicators */
+[aria-busy="true"] {
+  cursor: wait;
+}
+
+/* Live region styling */
+[role="status"],
+[role="alert"] {
+  contain: content;
+}
+
+/* Live region styles - keeping selectors for future customization */

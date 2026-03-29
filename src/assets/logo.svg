@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 40" width="320" height="40">
+  <!-- Swoosh icon - 3 curved brush stroke lines -->
+  <g fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round">
+    <path d="M 4 32 Q 8 20, 14 10 Q 18 4, 22 2" />
+    <path d="M 8 34 Q 12 22, 18 12 Q 22 6, 26 5" />
+    <path d="M 12 36 Q 16 24, 22 14 Q 26 8, 30 8" />
+  </g>
+  
+  <!-- NEXT LEVEL HELICOPTERS text -->
+  <text x="38" y="26" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" letter-spacing="2" fill="#1a1a1a">NEXT LEVEL HELICOPTERS</text>
+</svg>
