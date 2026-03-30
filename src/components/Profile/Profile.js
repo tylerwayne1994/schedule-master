@@ -7,7 +7,7 @@ const ADMIN_PIN = '4001';
 
 function Profile() {
   const { currentUser, updateUser, elevateToAdmin } = useAuth();
-  const { getUserBookings, helicopters } = useSchedule();
+  const { getUserBookings } = useSchedule();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,16 +22,16 @@ function Profile() {
   const [pinError, setPinError] = useState('');
 
   const myBookings = getUserBookings(currentUser?.id) || [];
-  const completedFlights = myBookings.filter(b => b.status === 'confirmed').length;
+  const completedFlights = myBookings.filter(b => b.status === 'completed').length;
   const totalHours = myBookings
-    .filter(b => b.status === 'confirmed')
-    .reduce((sum, b) => sum + (b.endTime - b.startTime), 0);
-  const totalSpent = myBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => b.status === 'completed' || b.status === 'confirmed')
     .reduce((sum, b) => {
-      const heli = helicopters.find(h => h.id === b.helicopterId);
-      return sum + (heli ? heli.hourlyRate * (b.endTime - b.startTime) : 0);
+      const hours = Number.isFinite(b.actualHours)
+        ? b.actualHours
+        : ((b.endTime - b.startTime) || 0);
+      return sum + hours;
     }, 0);
+  // Intentionally do not compute/track total spend
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -44,10 +44,15 @@ function Profile() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handlePinSubmit = (e) => {
+  const handlePinSubmit = async (e) => {
     e.preventDefault();
     if (pin === ADMIN_PIN) {
-      elevateToAdmin();
+      const result = await elevateToAdmin();
+      if (result?.success === false) {
+        setPinError(result.error || 'Failed to update role. Check Supabase RLS policies.');
+        setPin('');
+        return;
+      }
       setShowPinModal(false);
       setPin('');
       setPinError('');
@@ -59,9 +64,9 @@ function Profile() {
     }
   };
 
-  const handlePinKeyDown = (e) => {
+  const handlePinKeyDown = async (e) => {
     if (e.key === 'Enter') {
-      handlePinSubmit(e);
+      await handlePinSubmit(e);
     }
   };
 
@@ -122,10 +127,6 @@ function Profile() {
           <div className="stat-box">
             <div className="stat-number">{totalHours.toFixed(1)}</div>
             <div className="stat-label">Flight Hours</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-number">${totalSpent.toLocaleString()}</div>
-            <div className="stat-label">Total Spent</div>
           </div>
         </div>
 

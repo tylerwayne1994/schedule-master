@@ -21,17 +21,18 @@ function MyBookings() {
     return `${hour - 12}:00 PM`;
   };
 
-  const handleCancel = (id) => {
+  const handleCancel = async (id) => {
     if (window.confirm('Cancel this booking?')) {
-      cancelBooking(id);
+      await cancelBooking(id);
     }
   };
 
+  const today = new Date(format(new Date(), 'yyyy-MM-dd'));
   const upcomingBookings = myBookings.filter(b => 
-    b.status === 'confirmed' && new Date(b.date) >= new Date(format(new Date(), 'yyyy-MM-dd'))
+    b.status === 'confirmed' && new Date(b.date) >= today
   );
   const pastBookings = myBookings.filter(b => 
-    b.status === 'confirmed' && new Date(b.date) < new Date(format(new Date(), 'yyyy-MM-dd'))
+    b.status === 'completed' || (b.status === 'confirmed' && new Date(b.date) < today)
   );
   const cancelledBookings = myBookings.filter(b => b.status === 'cancelled');
 
@@ -48,8 +49,7 @@ function MyBookings() {
             {upcomingBookings.map(booking => {
               const heli = getHelicopter(booking.helicopterId);
               const instructor = getInstructor(booking.instructorId);
-              const duration = booking.endTime - booking.startTime;
-              const cost = heli ? heli.hourlyRate * duration : 0;
+              // Intentionally do not compute/track booking cost
 
               return (
                 <div key={booking.id} className="booking-card upcoming">
@@ -66,7 +66,6 @@ function MyBookings() {
                     <div className="booking-instructor">Instructor: {instructor.name}</div>
                   )}
                   <div className="booking-type">{booking.type}</div>
-                  <div className="booking-cost">${cost}</div>
                   <button className="btn-cancel-booking" onClick={() => handleCancel(booking.id)}>
                     Cancel
                   </button>

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { addDays, format, startOfWeek } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import BookingModal from '../Schedule/BookingModal';
 import './Admin.css';
 
@@ -32,7 +33,7 @@ function getBookingSegmentForDate(booking, dateStr) {
 }
 
 function HelicopterManagement() {
-  const { helicopters, addHelicopter, updateHelicopter, deleteHelicopter } = useSchedule();
+  const { helicopters, bookings, addHelicopter, updateHelicopter, deleteHelicopter } = useSchedule();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -40,8 +41,54 @@ function HelicopterManagement() {
     model: '',
     hourlyRate: '',
     status: 'available',
-    hobbsTime: ''
+    hobbsTime: '',
+    inspection50Hour: '',
+    inspection100Hour: ''
   });
+
+  const getBookingEndDateTime = (booking) => {
+    const endDateStr = booking.endDate || booking.date;
+    const end = new Date(`${endDateStr}T00:00:00`);
+    const hours = typeof booking.endTime === 'number' ? booking.endTime : parseFloat(booking.endTime);
+    const hourInt = Math.floor(hours);
+    const minutes = hours % 1 === 0.5 ? 30 : 0;
+    end.setHours(hourInt, minutes, 0, 0);
+    return end;
+  };
+
+  const getBookingDurationHours = (booking) => {
+    const startDateStr = booking.date;
+    const endDateStr = booking.endDate || booking.date;
+
+    const startDate = new Date(`${startDateStr}T00:00:00`);
+    const endDate = new Date(`${endDateStr}T00:00:00`);
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+    const startTime = typeof booking.startTime === 'number' ? booking.startTime : parseFloat(booking.startTime);
+    const endTime = typeof booking.endTime === 'number' ? booking.endTime : parseFloat(booking.endTime);
+
+    if (daysDiff <= 0) {
+      return endTime - startTime;
+    }
+
+    const hoursFirstDay = 24 - startTime;
+    const hoursLastDay = endTime;
+    const fullDaysHours = Math.max(0, (daysDiff - 1) * 24);
+    return hoursFirstDay + fullDaysHours + hoursLastDay;
+  };
+
+  const getCompletedFlightHoursForHelicopter = (helicopterId) => {
+    const now = new Date();
+    return (bookings || [])
+      .filter(b => b.helicopterId === helicopterId)
+      .filter(b => b.status !== 'cancelled')
+      .filter(b => getBookingEndDateTime(b) <= now)
+      .reduce((sum, b) => {
+        const actual = b.actualHours != null ? parseFloat(b.actualHours) : null;
+        if (Number.isFinite(actual) && actual > 0) return sum + actual;
+        return sum + (getBookingDurationHours(b) || 0);
+      }, 0);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -49,7 +96,9 @@ function HelicopterManagement() {
       model: '',
       hourlyRate: '',
       status: 'available',
-      hobbsTime: ''
+      hobbsTime: '',
+      inspection50Hour: '',
+      inspection100Hour: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -61,31 +110,35 @@ function HelicopterManagement() {
       model: helicopter.model,
       hourlyRate: helicopter.hourlyRate,
       status: helicopter.status,
-      hobbsTime: helicopter.hobbsTime || 0
+      hobbsTime: helicopter.hobbsTime || 0,
+      inspection50Hour: helicopter.inspection50Hour || '',
+      inspection100Hour: helicopter.inspection100Hour || ''
     });
     setEditingId(helicopter.id);
     setShowForm(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const data = {
       ...formData,
       hourlyRate: parseFloat(formData.hourlyRate),
-      hobbsTime: parseFloat(formData.hobbsTime) || 0
+      hobbsTime: parseFloat(formData.hobbsTime) || 0,
+      inspection50Hour: formData.inspection50Hour ? parseFloat(formData.inspection50Hour) : null,
+      inspection100Hour: formData.inspection100Hour ? parseFloat(formData.inspection100Hour) : null
     };
 
     if (editingId) {
-      updateHelicopter(editingId, data);
+      await updateHelicopter(editingId, data);
     } else {
-      addHelicopter(data);
+      await addHelicopter(data);
     }
     resetForm();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this helicopter?')) {
-      deleteHelicopter(id);
+      await deleteHelicopter(id);
     }
   };
 
@@ -155,6 +208,28 @@ function HelicopterManagement() {
                 placeholder="0.0"
               />
             </div>
+            <div className="form-group">
+              <label>50hr Inspection Last Completed At (hrs)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.inspection50Hour}
+                onChange={(e) => setFormData(prev => ({ ...prev, inspection50Hour: e.target.value }))}
+                min="0"
+                placeholder="Total completed flight hours"
+              />
+            </div>
+            <div className="form-group">
+              <label>100hr Inspection Last Completed At (hrs)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.inspection100Hour}
+                onChange={(e) => setFormData(prev => ({ ...prev, inspection100Hour: e.target.value }))}
+                min="0"
+                placeholder="Total completed flight hours"
+              />
+            </div>
           </div>
           <div className="form-actions">
             <button type="submit" className="btn-primary">
@@ -175,11 +250,20 @@ function HelicopterManagement() {
             <th>Rate/hr</th>
             <th>Status</th>
             <th>Hobbs Time</th>
+            <th>50hr Insp</th>
+            <th>100hr Insp</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {helicopters.map(h => (
+          {helicopters.map(h => {
+            const hobbsTime = h.hobbsTime || 0;
+            const completedHours = getCompletedFlightHoursForHelicopter(h.id);
+            const next50 = h.inspection50Hour != null ? (parseFloat(h.inspection50Hour) + 50) : null;
+            const next100 = h.inspection100Hour != null ? (parseFloat(h.inspection100Hour) + 100) : null;
+            const remaining50 = next50 != null ? (next50 - completedHours) : null;
+            const remaining100 = next100 != null ? (next100 - completedHours) : null;
+            return (
             <tr key={h.id}>
               <td className="tail-number">{h.tailNumber}</td>
               <td>{h.model}</td>
@@ -189,13 +273,20 @@ function HelicopterManagement() {
                   {h.status}
                 </span>
               </td>
-              <td className="hobbs-time">{(h.hobbsTime || 0).toFixed(1)} hrs</td>
+              <td className="hobbs-time">{hobbsTime.toFixed(1)} hrs</td>
+              <td className={`inspection-cell ${remaining50 !== null && remaining50 <= 5 ? 'due-soon' : ''} ${remaining50 !== null && remaining50 <= 0 ? 'overdue' : ''}`}>
+                {remaining50 !== null ? `${remaining50.toFixed(1)} hrs left` : '-'}
+              </td>
+              <td className={`inspection-cell ${remaining100 !== null && remaining100 <= 10 ? 'due-soon' : ''} ${remaining100 !== null && remaining100 <= 0 ? 'overdue' : ''}`}>
+                {remaining100 !== null ? `${remaining100.toFixed(1)} hrs left` : '-'}
+              </td>
               <td className="actions">
                 <button className="btn-edit" onClick={() => handleEdit(h)}>Edit</button>
                 <button className="btn-delete" onClick={() => handleDelete(h.id)}>Delete</button>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -262,7 +353,40 @@ function UserManagement() {
 
 function AdminDashboard() {
   const { helicopters, bookings, instructors } = useSchedule();
-  const { users } = useAuth();
+  const { users, isAdmin } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+
+  React.useEffect(() => {
+    const loadNotifications = async () => {
+      if (!isAdmin()) return;
+      if (!isSupabaseConfigured()) {
+        setNotifications([]);
+        setNotificationsError('Supabase is not configured. Notifications require Supabase.');
+        return;
+      }
+
+      setNotificationsLoading(true);
+      setNotificationsError('');
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (data && !error) {
+        setNotifications(data);
+      } else if (error) {
+        setNotifications([]);
+        setNotificationsError(error.message || 'Unable to load notifications');
+      }
+
+      setNotificationsLoading(false);
+    };
+
+    loadNotifications();
+  }, [isAdmin]);
   const compactWeekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), []);
   const compactWeekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(compactWeekStart, index)),
@@ -271,13 +395,6 @@ function AdminDashboard() {
 
   const activeBookings = bookings.filter(b => b.status === 'confirmed').length;
   const availableHelicopters = helicopters.filter(h => h.status === 'available').length;
-  const totalRevenue = bookings
-    .filter(b => b.status === 'confirmed')
-    .reduce((sum, b) => {
-      const heli = helicopters.find(h => h.id === b.helicopterId);
-      const duration = b.endTime - b.startTime;
-      return sum + (heli ? heli.hourlyRate * duration : 0);
-    }, 0);
 
   const bookingsByCompactDay = compactWeekDays.map((day) => {
     const dateStr = format(day, 'yyyy-MM-dd');
@@ -297,6 +414,32 @@ function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <h2>Dashboard Overview</h2>
+
+      {isAdmin() && (
+        <div className="admin-mini-calendar-panel" style={{ marginBottom: 20 }}>
+          <div className="admin-mini-calendar-header">
+            <h3>Notifications</h3>
+            <span>Recent</span>
+          </div>
+          <div style={{ padding: 16 }}>
+            {notificationsLoading ? (
+              <div style={{ color: '#6b7280' }}>Loading notifications…</div>
+            ) : notificationsError ? (
+              <div style={{ color: '#6b7280' }}>{notificationsError}</div>
+            ) : notifications.length === 0 ? (
+              <div style={{ color: '#6b7280' }}>No notifications yet.</div>
+            ) : (
+              notifications.map(n => (
+                <div key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid #eef2f7' }}>
+                  <div style={{ fontWeight: 600, color: '#111827' }}>{n.title || n.type}</div>
+                  <div style={{ color: '#6b7280' }}>{n.message}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-value">{helicopters.length}</div>
@@ -317,10 +460,6 @@ function AdminDashboard() {
         <div className="stat-card">
           <div className="stat-value">{instructors.length}</div>
           <div className="stat-label">CFIs</div>
-        </div>
-        <div className="stat-card highlight">
-          <div className="stat-value">${totalRevenue.toLocaleString()}</div>
-          <div className="stat-label">Total Revenue</div>
         </div>
       </div>
 
@@ -457,6 +596,7 @@ function BookingListManagement() {
 
 function MaintenanceManagement() {
   const { helicopters, bookings, createBooking, updateBooking, deleteBooking } = useSchedule();
+  const { currentUser } = useAuth();
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -487,9 +627,14 @@ function MaintenanceManagement() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!currentUser?.id) {
+      setError('You must be signed in to create maintenance blocks.');
+      return;
+    }
 
     const maintenanceBooking = {
       helicopterId: formData.helicopterId,
@@ -503,12 +648,12 @@ function MaintenanceManagement() {
       instructorId: '',
       type: 'maintenance',
       notes: formData.notes,
-      userId: 'admin-001'
+      userId: currentUser?.id
     };
 
     const result = editingId
-      ? updateBooking(editingId, maintenanceBooking)
-      : createBooking(maintenanceBooking);
+      ? await updateBooking(editingId, maintenanceBooking)
+      : await createBooking(maintenanceBooking);
 
     if (!result?.success) {
       setError(result?.error || 'Unable to save maintenance block');
@@ -531,9 +676,9 @@ function MaintenanceManagement() {
     });
   };
 
-  const handleDelete = (bookingId) => {
+  const handleDelete = async (bookingId) => {
     if (window.confirm('Delete this maintenance block?')) {
-      deleteBooking(bookingId);
+      await deleteBooking(bookingId);
     }
   };
 

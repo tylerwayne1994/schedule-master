@@ -83,6 +83,8 @@ CREATE TABLE bookings (
   flight_type TEXT DEFAULT 'training' CHECK (flight_type IN ('training', 'rental', 'tour', 'maintenance', 'checkride')),
   notes TEXT,
   status TEXT DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled', 'completed')),
+  actual_hours DECIMAL(10, 1),
+  actual_hours_submitted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
@@ -101,6 +103,20 @@ CREATE INDEX idx_bookings_helicopter ON bookings(helicopter_id, date);
 CREATE INDEX idx_bookings_user ON bookings(user_id);
 
 -- =============================================
+-- NOTIFICATIONS TABLE (Admin alerts)
+-- =============================================
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  type TEXT NOT NULL,
+  title TEXT,
+  message TEXT NOT NULL,
+  booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+-- =============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- =============================================
 
@@ -109,6 +125,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE helicopters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE instructors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Helper function to check if user is admin
 CREATE OR REPLACE FUNCTION is_admin()
@@ -196,6 +213,19 @@ CREATE POLICY "Users can delete own bookings"
 
 CREATE POLICY "Admins can do everything with bookings"
   ON bookings FOR ALL
+  USING (is_admin());
+
+-- NOTIFICATIONS POLICIES (admins only)
+CREATE POLICY "Admins can view notifications"
+  ON notifications FOR SELECT
+  USING (is_admin());
+
+CREATE POLICY "Admins can update notifications"
+  ON notifications FOR UPDATE
+  USING (is_admin());
+
+CREATE POLICY "Admins can delete notifications"
+  ON notifications FOR DELETE
   USING (is_admin());
 
 -- =============================================

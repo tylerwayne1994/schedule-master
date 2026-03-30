@@ -163,7 +163,6 @@ export function generateBookingEmailBody(booking, userName) {
   const duration = dayDiff === 0
     ? endTime - startTime
     : (24 - startTime) + ((dayDiff - 1) * 24) + endTime;
-  const estimatedCost = duration * helicopter.hourlyRate;
   const resolvedFlightType = flightType || type || 'flight';
   const formattedDateLine = formattedDate === formattedEndDate
     ? formattedDate
@@ -187,8 +186,6 @@ Model: ${helicopter.model}
 Rate: $${helicopter.hourlyRate}/hour
 ${instructor ? `\nINSTRUCTOR\n----------\n${instructor.name}` : ''}
 ${notes ? `\nNOTES\n-----\n${notes}` : ''}
-
-ESTIMATED COST: $${estimatedCost.toFixed(2)}
 
 Please arrive 15 minutes before your scheduled flight time.
 

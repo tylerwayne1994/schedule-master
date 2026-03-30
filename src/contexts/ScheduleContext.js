@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const ScheduleContext = createContext();
 
@@ -24,54 +25,209 @@ export function ScheduleProvider({ children }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Initialize from localStorage
-  useEffect(() => {
-    const storedHelicopters = localStorage.getItem('nlh_helicopters');
-    const storedInstructors = localStorage.getItem('nlh_instructors');
-    const storedBookings = localStorage.getItem('nlh_bookings');
+  const mapBookingFromDb = (b) => ({
+    id: b.id,
+    helicopterId: b.helicopter_id,
+    userId: b.user_id,
+    date: b.date,
+    endDate: b.end_date || b.date,
+    startTime: typeof b.start_time === 'number' ? b.start_time : parseFloat(b.start_time),
+    endTime: typeof b.end_time === 'number' ? b.end_time : parseFloat(b.end_time),
+    instructorId: b.instructor_id || '',
+    customerName: b.customer_name || '',
+    customerPhone: b.customer_phone || '',
+    customerEmail: b.customer_email || '',
+    type: b.type || 'flight',
+    notes: b.notes || '',
+    status: b.status || 'confirmed',
+    actualHours: b.actual_hours != null ? (typeof b.actual_hours === 'number' ? b.actual_hours : parseFloat(b.actual_hours)) : null,
+    actualHoursSubmittedAt: b.actual_hours_submitted_at || null,
+    createdAt: b.created_at
+  });
 
+  const mapBookingToDb = (booking) => ({
+    helicopter_id: booking.helicopterId,
+    user_id: booking.userId,
+    date: booking.date,
+    end_date: booking.endDate || booking.date,
+    start_time: booking.startTime,
+    end_time: booking.endTime,
+    instructor_id: booking.instructorId || null,
+    customer_name: booking.customerName || null,
+    customer_phone: booking.customerPhone || null,
+    customer_email: booking.customerEmail || null,
+    type: booking.type || 'flight',
+    notes: booking.notes || null,
+    status: booking.status || 'confirmed',
+    actual_hours: booking.actualHours ?? null,
+    actual_hours_submitted_at: booking.actualHoursSubmittedAt ?? null
+  });
+
+  // Load helicopters from Supabase
+  const loadHelicopters = async () => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('helicopters')
+        .select('*')
+        .order('tail_number');
+      
+      if (data && !error) {
+        // Map snake_case to camelCase
+        const mapped = data.map(h => ({
+          id: h.id,
+          tailNumber: h.tail_number,
+          model: h.model,
+          hourlyRate: parseFloat(h.hourly_rate),
+          status: h.status,
+          hobbsTime: parseFloat(h.hobbs_time) || 0,
+          inspection50Hour: h.inspection_50_hour ? parseFloat(h.inspection_50_hour) : null,
+          inspection100Hour: h.inspection_100_hour ? parseFloat(h.inspection_100_hour) : null,
+          createdAt: h.created_at
+        }));
+        setHelicopters(mapped);
+        return;
+      }
+
+      console.error('Failed to load helicopters from Supabase:', error);
+      setHelicopters([]);
+      return;
+    }
+    // Demo-mode fallback to localStorage
+    const storedHelicopters = localStorage.getItem('nlh_helicopters');
     if (storedHelicopters) {
       setHelicopters(JSON.parse(storedHelicopters));
     } else {
       setHelicopters(DEFAULT_HELICOPTERS);
-      localStorage.setItem('nlh_helicopters', JSON.stringify(DEFAULT_HELICOPTERS));
+    }
+  };
+
+  const loadInstructors = async () => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('instructors')
+        .select('*')
+        .order('name');
+
+      if (data && !error) {
+        const mapped = data.map(i => ({
+          id: i.id,
+          name: i.name,
+          certifications: Array.isArray(i.certifications) ? i.certifications : [],
+          status: i.status || 'active',
+          createdAt: i.created_at
+        }));
+        setInstructors(mapped);
+        return;
+      }
+
+      console.error('Failed to load instructors from Supabase:', error);
+      setInstructors([]);
+      return;
     }
 
+    const storedInstructors = localStorage.getItem('nlh_instructors');
     if (storedInstructors) {
       setInstructors(JSON.parse(storedInstructors));
     } else {
       setInstructors(DEFAULT_INSTRUCTORS);
       localStorage.setItem('nlh_instructors', JSON.stringify(DEFAULT_INSTRUCTORS));
     }
+  };
 
+  const loadBookings = async () => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (data && !error) {
+        setBookings(data.map(mapBookingFromDb));
+        return;
+      }
+
+      console.error('Failed to load bookings from Supabase:', error);
+      setBookings([]);
+      return;
+    }
+
+    const storedBookings = localStorage.getItem('nlh_bookings');
     if (storedBookings) {
       setBookings(JSON.parse(storedBookings));
     }
+  };
 
-    setLoading(false);
+  // Initialize data
+  useEffect(() => {
+    const initData = async () => {
+      await loadHelicopters();
+
+      await loadInstructors();
+
+      await loadBookings();
+
+      setLoading(false);
+    };
+    
+    initData();
   }, []);
 
-  // Save to localStorage on changes
+  // Save helicopters to localStorage as backup (Supabase is primary)
   useEffect(() => {
-    if (!loading) {
+    if (!isSupabaseConfigured() && !loading && helicopters.length > 0) {
       localStorage.setItem('nlh_helicopters', JSON.stringify(helicopters));
     }
   }, [helicopters, loading]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!isSupabaseConfigured() && !loading) {
       localStorage.setItem('nlh_instructors', JSON.stringify(instructors));
     }
   }, [instructors, loading]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!isSupabaseConfigured() && !loading) {
       localStorage.setItem('nlh_bookings', JSON.stringify(bookings));
     }
   }, [bookings, loading]);
 
   // Helicopter CRUD
-  const addHelicopter = (helicopter) => {
+  const addHelicopter = async (helicopter) => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('helicopters')
+        .insert({
+          tail_number: helicopter.tailNumber,
+          model: helicopter.model,
+          hourly_rate: helicopter.hourlyRate,
+          status: helicopter.status || 'available',
+          hobbs_time: helicopter.hobbsTime || 0,
+          inspection_50_hour: helicopter.inspection50Hour || null,
+          inspection_100_hour: helicopter.inspection100Hour || null
+        })
+        .select()
+        .single();
+      
+      if (data && !error) {
+        const newHelicopter = {
+          id: data.id,
+          tailNumber: data.tail_number,
+          model: data.model,
+          hourlyRate: parseFloat(data.hourly_rate),
+          status: data.status,
+          hobbsTime: parseFloat(data.hobbs_time) || 0,
+          inspection50Hour: data.inspection_50_hour ? parseFloat(data.inspection_50_hour) : null,
+          inspection100Hour: data.inspection_100_hour ? parseFloat(data.inspection_100_hour) : null,
+          createdAt: data.created_at
+        };
+        setHelicopters(prev => [...prev, newHelicopter]);
+        return newHelicopter;
+      }
+      console.error('Failed to add helicopter:', error);
+      return null;
+    }
+    
+    // Fallback to localStorage
     const newHelicopter = {
       id: uuidv4(),
       ...helicopter,
@@ -81,18 +237,80 @@ export function ScheduleProvider({ children }) {
     return newHelicopter;
   };
 
-  const updateHelicopter = (id, updates) => {
+  const updateHelicopter = async (id, updates) => {
+    if (isSupabaseConfigured()) {
+      const dbUpdates = {};
+      if (updates.tailNumber !== undefined) dbUpdates.tail_number = updates.tailNumber;
+      if (updates.model !== undefined) dbUpdates.model = updates.model;
+      if (updates.hourlyRate !== undefined) dbUpdates.hourly_rate = updates.hourlyRate;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.hobbsTime !== undefined) dbUpdates.hobbs_time = updates.hobbsTime;
+      if (updates.inspection50Hour !== undefined) dbUpdates.inspection_50_hour = updates.inspection50Hour;
+      if (updates.inspection100Hour !== undefined) dbUpdates.inspection_100_hour = updates.inspection100Hour;
+      
+      const { error } = await supabase
+        .from('helicopters')
+        .update(dbUpdates)
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Failed to update helicopter:', error);
+        return { success: false, error: error.message };
+      }
+    }
+    
     setHelicopters(prev => prev.map(h => 
       h.id === id ? { ...h, ...updates } : h
     ));
+    return { success: true };
   };
 
-  const deleteHelicopter = (id) => {
+  const deleteHelicopter = async (id) => {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('helicopters')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Failed to delete helicopter:', error);
+        return { success: false, error: error.message };
+      }
+    }
+    
     setHelicopters(prev => prev.filter(h => h.id !== id));
+    return { success: true };
   };
 
   // Instructor CRUD
-  const addInstructor = (instructor) => {
+  const addInstructor = async (instructor) => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('instructors')
+        .insert({
+          name: instructor.name,
+          certifications: Array.isArray(instructor.certifications) ? instructor.certifications : [],
+          status: instructor.status || 'active'
+        })
+        .select()
+        .single();
+
+      if (data && !error) {
+        const newInstructor = {
+          id: data.id,
+          name: data.name,
+          certifications: Array.isArray(data.certifications) ? data.certifications : [],
+          status: data.status || 'active',
+          createdAt: data.created_at
+        };
+        setInstructors(prev => [...prev, newInstructor]);
+        return newInstructor;
+      }
+
+      console.error('Failed to add instructor:', error);
+      return null;
+    }
+
     const newInstructor = {
       id: uuidv4(),
       ...instructor,
@@ -102,14 +320,45 @@ export function ScheduleProvider({ children }) {
     return newInstructor;
   };
 
-  const updateInstructor = (id, updates) => {
+  const updateInstructor = async (id, updates) => {
+    if (isSupabaseConfigured()) {
+      const dbUpdates = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.certifications !== undefined) dbUpdates.certifications = updates.certifications;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+
+      const { error } = await supabase
+        .from('instructors')
+        .update(dbUpdates)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to update instructor:', error);
+        return { success: false, error: error.message };
+      }
+    }
+
     setInstructors(prev => prev.map(i => 
       i.id === id ? { ...i, ...updates } : i
     ));
+    return { success: true };
   };
 
-  const deleteInstructor = (id) => {
+  const deleteInstructor = async (id) => {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('instructors')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete instructor:', error);
+        return { success: false, error: error.message };
+      }
+    }
+
     setInstructors(prev => prev.filter(i => i.id !== id));
+    return { success: true };
   };
 
   const hasBookingConflict = (candidateBooking, bookingIdToIgnore = null) => {
@@ -145,7 +394,7 @@ export function ScheduleProvider({ children }) {
   };
 
   // Booking CRUD
-  const createBooking = (booking) => {
+  const createBooking = async (booking) => {
     if (hasBookingConflict(booking)) {
       return { success: false, error: 'Time slot already booked' };
     }
@@ -157,11 +406,29 @@ export function ScheduleProvider({ children }) {
       status: 'confirmed',
       createdAt: new Date().toISOString()
     };
+
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert(mapBookingToDb(newBooking))
+        .select()
+        .single();
+
+      if (data && !error) {
+        const saved = mapBookingFromDb(data);
+        setBookings(prev => [saved, ...prev]);
+        return { success: true, booking: saved };
+      }
+
+      console.error('Failed to create booking:', error);
+      return { success: false, error: error?.message || 'Unable to create booking' };
+    }
+
     setBookings(prev => [...prev, newBooking]);
     return { success: true, booking: newBooking };
   };
 
-  const updateBooking = (id, updates) => {
+  const updateBooking = async (id, updates) => {
     const existingBooking = bookings.find(booking => booking.id === id);
     if (!existingBooking) {
       return { success: false, error: 'Booking not found' };
@@ -177,6 +444,19 @@ export function ScheduleProvider({ children }) {
       return { success: false, error: 'Time slot already booked' };
     }
 
+    if (isSupabaseConfigured()) {
+      const dbUpdates = mapBookingToDb({ ...existingBooking, ...updates, id });
+      const { error } = await supabase
+        .from('bookings')
+        .update(dbUpdates)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to update booking:', error);
+        return { success: false, error: error?.message || 'Unable to update booking' };
+      }
+    }
+
     setBookings(prev => prev.map(b => 
       b.id === id ? { ...b, ...updates } : b
     ));
@@ -184,14 +464,78 @@ export function ScheduleProvider({ children }) {
     return { success: true };
   };
 
-  const cancelBooking = (id) => {
+  const cancelBooking = async (id) => {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to cancel booking:', error);
+        return { success: false, error: error?.message || 'Unable to cancel booking' };
+      }
+    }
+
     setBookings(prev => prev.map(b => 
       b.id === id ? { ...b, status: 'cancelled' } : b
     ));
+    return { success: true };
   };
 
-  const deleteBooking = (id) => {
+  const deleteBooking = async (id) => {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete booking:', error);
+        return { success: false, error: error?.message || 'Unable to delete booking' };
+      }
+    }
+
     setBookings(prev => prev.filter(b => b.id !== id));
+    return { success: true };
+  };
+
+  const completeFlightHours = async (bookingId, actualHours) => {
+    const hours = parseFloat(actualHours);
+    if (!Number.isFinite(hours) || hours <= 0) {
+      return { success: false, error: 'Enter a valid flight time' };
+    }
+
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      return { success: false, error: 'Booking not found' };
+    }
+
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.rpc('complete_flight', {
+        p_booking_id: bookingId,
+        p_actual_hours: hours
+      });
+
+      if (error) {
+        console.error('Failed to complete flight:', error);
+        return { success: false, error: error?.message || 'Unable to complete flight' };
+      }
+    }
+
+    setBookings(prev => prev.map(b => (
+      b.id === bookingId
+        ? { ...b, actualHours: hours, actualHoursSubmittedAt: new Date().toISOString(), status: 'completed' }
+        : b
+    )));
+
+    setHelicopters(prev => prev.map(h => (
+      h.id === booking.helicopterId
+        ? { ...h, hobbsTime: (parseFloat(h.hobbsTime) || 0) + hours }
+        : h
+    )));
+
+    return { success: true };
   };
 
   const getBookingsForDate = (date) => {
@@ -230,6 +574,7 @@ export function ScheduleProvider({ children }) {
     updateBooking,
     cancelBooking,
     deleteBooking,
+    completeFlightHours,
     getBookingsForDate,
     getBookingsForHelicopter,
     getUserBookings,

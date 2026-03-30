@@ -103,29 +103,83 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- UPDATE HOBBS TIME AFTER FLIGHT
+-- COMPLETE FLIGHT (actual hours + hobbs + admin notification)
 -- =============================================
-CREATE OR REPLACE FUNCTION update_hobbs_after_flight()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION complete_flight(
+  p_booking_id UUID,
+  p_actual_hours DECIMAL
+)
+RETURNS VOID AS $$
 DECLARE
-  flight_hours DECIMAL;
+  v_booking RECORD;
+  v_delta DECIMAL;
+  v_actor UUID;
+  v_user_name TEXT;
+  v_tail_number TEXT;
+  v_action TEXT;
 BEGIN
-  -- Only update when booking is marked as completed
-  IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-    flight_hours := NEW.end_time - NEW.start_time;
-    
-    UPDATE helicopters
-    SET hobbs_time = hobbs_time + flight_hours
-    WHERE id = NEW.helicopter_id;
+  v_actor := auth.uid();
+  IF v_actor IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
   END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_hobbs_on_completion
-  AFTER UPDATE ON bookings
-  FOR EACH ROW EXECUTE FUNCTION update_hobbs_after_flight();
+  IF p_actual_hours IS NULL OR p_actual_hours <= 0 THEN
+    RAISE EXCEPTION 'Invalid actual hours';
+  END IF;
+
+  SELECT *
+  INTO v_booking
+  FROM bookings
+  WHERE id = p_booking_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Booking not found';
+  END IF;
+
+  IF v_booking.status = 'cancelled' THEN
+    RAISE EXCEPTION 'Booking is cancelled';
+  END IF;
+
+  IF v_booking.user_id <> v_actor AND NOT is_admin() THEN
+    RAISE EXCEPTION 'Not authorized to complete this booking';
+  END IF;
+
+  v_delta := p_actual_hours - COALESCE(v_booking.actual_hours, 0);
+  v_action := CASE WHEN v_booking.actual_hours IS NULL THEN 'submitted' ELSE 'updated' END;
+
+  UPDATE bookings
+  SET actual_hours = p_actual_hours,
+      actual_hours_submitted_at = NOW(),
+      status = 'completed'
+  WHERE id = p_booking_id;
+
+  IF v_delta <> 0 THEN
+    UPDATE helicopters
+    SET hobbs_time = COALESCE(hobbs_time, 0) + v_delta
+    WHERE id = v_booking.helicopter_id;
+  END IF;
+
+  SELECT COALESCE(p.name, p.email)
+  INTO v_user_name
+  FROM profiles p
+  WHERE p.id = v_booking.user_id;
+
+  SELECT h.tail_number
+  INTO v_tail_number
+  FROM helicopters h
+  WHERE h.id = v_booking.helicopter_id;
+
+  INSERT INTO notifications (type, title, message, booking_id, created_by)
+  VALUES (
+    'flight_hours_' || v_action,
+    'Flight hours ' || v_action,
+    COALESCE(v_user_name, 'User') || ' ' || v_action || ' ' || to_char(p_actual_hours, 'FM999999990.0') || ' hrs for ' || COALESCE(v_tail_number, 'helicopter') || ' on ' || to_char(v_booking.date, 'YYYY-MM-DD') || '.',
+    p_booking_id,
+    v_actor
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================
 -- ADMIN DASHBOARD STATS

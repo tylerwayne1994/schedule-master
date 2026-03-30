@@ -293,26 +293,34 @@ export function AuthProvider({ children }) {
 
   const elevateToAdmin = async () => {
     if (currentUser) {
-      const updatedUser = { ...currentUser, role: 'admin' };
-      setCurrentUser(updatedUser);
-      
       // Update in localStorage for demo mode
       if (!isSupabaseConfigured()) {
+        const updatedUser = { ...currentUser, role: 'admin' };
+        setCurrentUser(updatedUser);
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        localStorage.setItem('nlh_session', JSON.stringify(updatedUser));
         setUsers(prev => prev.map(u => 
           u.id === currentUser.id ? { ...u, role: 'admin' } : u
         ));
       } else {
-        // Update role in Supabase
-        await supabase
+        // Update role in Supabase FIRST, then update local state
+        const { error } = await supabase
           .from('profiles')
           .update({ role: 'admin' })
           .eq('id', currentUser.id);
 
-        await loadUserProfile(currentUser.id);
+        if (error) {
+          console.error('Failed to update admin role:', error);
+          return { success: false, error: error.message };
+        }
+
+        // Now update local state after successful DB update
+        setCurrentUser(prev => ({ ...prev, role: 'admin' }));
         await loadAllProfiles();
       }
+      return { success: true };
     }
+    return { success: false, error: 'No user logged in' };
   };
 
   const value = {

@@ -146,6 +146,21 @@
   font-family: monospace;
 }
 
+.inspection-cell {
+  font-family: monospace;
+  font-weight: 500;
+  color: #16a34a;
+}
+
+.inspection-cell.due-soon {
+  color: #d97706;
+}
+
+.inspection-cell.overdue {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .status-badge {
   display: inline-block;
   padding: 4px 10px;

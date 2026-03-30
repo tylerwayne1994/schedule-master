@@ -24,13 +24,14 @@ function formatTimeLabel(decimal) {
 
 function BookingModal({ booking, slot, onClose }) {
   const { helicopters, instructors, createBooking, updateBooking, deleteBooking, cancelBooking } = useSchedule();
-  const { currentUser, isAdmin, hasGoogleCalendarAccess, getGoogleAccessToken } = useAuth();
+  const { currentUser, isAdmin, users, hasGoogleCalendarAccess, getGoogleAccessToken } = useAuth();
   
   const isEditing = !!booking;
   const isOwner = booking?.userId === currentUser?.id;
   const canEdit = isAdmin() || isOwner || !isEditing;
 
   const [formData, setFormData] = useState({
+    userId: booking?.userId || currentUser?.id || '',
     helicopterId: slot?.helicopterId || booking?.helicopterId || '',
     date: slot?.date || booking?.date || format(new Date(), 'yyyy-MM-dd'),
     endDate: slot?.date || booking?.endDate || booking?.date || format(new Date(), 'yyyy-MM-dd'),
@@ -48,7 +49,6 @@ function BookingModal({ booking, slot, onClose }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [calendarAdded, setCalendarAdded] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
-  const [calendarDebug, setCalendarDebug] = useState([]);
   const [sendEmailDraft, setSendEmailDraft] = useState(true);
   
   // Accessibility: unique IDs for form elements
@@ -63,14 +63,6 @@ function BookingModal({ booking, slot, onClose }) {
     onEscape: onClose
   });
 
-  const appendCalendarDebug = (message, details) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const suffix = details ? `: ${details}` : '';
-    const line = `${timestamp} - ${message}${suffix}`;
-    setCalendarDebug(prev => [...prev, line]);
-    console.log('[Google Calendar Debug]', line);
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -84,6 +76,15 @@ function BookingModal({ booking, slot, onClose }) {
         ...prev,
         [name]: name === 'startTime' || name === 'endTime' ? parseFloat(value) : value
       };
+
+      if (name === 'userId' && isAdmin()) {
+        const selectedUser = (users || []).find(u => u.id === value);
+        if (selectedUser) {
+          if (!newData.customerName) newData.customerName = selectedUser.name || '';
+          if (!newData.customerEmail) newData.customerEmail = selectedUser.email || '';
+          if (!newData.customerPhone) newData.customerPhone = selectedUser.phone || '';
+        }
+      }
       
       // Auto-sync endDate when start date changes (if endDate would be before new start date)
       if (name === 'date' && newData.endDate < value) {
@@ -94,7 +95,7 @@ function BookingModal({ booking, slot, onClose }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setFieldErrors({});
@@ -111,20 +112,25 @@ function BookingModal({ booking, slot, onClose }) {
 
     const bookingData = {
       ...formData,
-      userId: currentUser.id
+      userId: isAdmin() ? formData.userId : currentUser.id
     };
+
+    if (isAdmin() && !bookingData.userId) {
+      setError('Select a user for this booking');
+      return;
+    }
 
     let savedBooking;
 
     if (isEditing) {
-      const result = updateBooking(booking.id, bookingData);
+      const result = await updateBooking(booking.id, bookingData);
       if (!result?.success) {
         setError(result?.error || 'Unable to update booking');
         return;
       }
       savedBooking = { ...booking, ...bookingData };
     } else {
-      const result = createBooking(bookingData);
+      const result = await createBooking(bookingData);
       if (!result.success) {
         setError(result.error);
         return;
@@ -149,16 +155,16 @@ function BookingModal({ booking, slot, onClose }) {
     onClose();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
-      deleteBooking(booking.id);
+      await deleteBooking(booking.id);
       onClose();
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {
-      cancelBooking(booking.id);
+      await cancelBooking(booking.id);
       onClose();
     }
   };
@@ -187,7 +193,6 @@ function BookingModal({ booking, slot, onClose }) {
   };
   
   const duration = calculateDuration();
-  const estimatedCost = selectedHelicopter ? selectedHelicopter.hourlyRate * duration : 0;
 
   // Prepare booking data for calendar
   const getCalendarBookingData = () => ({
@@ -211,65 +216,40 @@ function BookingModal({ booking, slot, onClose }) {
   });
 
   const handleAddToGoogleCalendar = async () => {
-    setCalendarDebug([]);
-    appendCalendarDebug('Started Add to Google Calendar');
-
     if (!selectedHelicopter) {
-      appendCalendarDebug('Blocked', 'No helicopter selected');
       setError('Select a helicopter before adding to Google Calendar');
       return;
     }
     
     const bookingData = getCalendarBookingData();
-    appendCalendarDebug('Booking data prepared', JSON.stringify({
-      date: bookingData.date,
-      endDate: bookingData.endDate,
-      startTime: bookingData.startTime,
-      endTime: bookingData.endTime,
-      helicopterId: bookingData.helicopter?.id || bookingData.helicopter?.tailNumber || 'none',
-      instructorId: bookingData.instructor?.id || 'none',
-      hasCustomerEmail: Boolean(bookingData.customerEmail)
-    }));
+    setError('');
     
     // If user has Google Calendar access via OAuth, create event directly
     if (hasGoogleCalendarAccess()) {
       setAddingToCalendar(true);
-      setError('');
-      appendCalendarDebug('OAuth token detected', 'Trying direct Google Calendar API');
       try {
         const token = getGoogleAccessToken();
-        appendCalendarDebug('OAuth token length', token ? String(token.length) : '0');
         await createGoogleCalendarEvent(token, bookingData);
-        appendCalendarDebug('Direct API success');
         setCalendarAdded(true);
       } catch (err) {
-        appendCalendarDebug('Direct API failed', err?.message || 'Unknown error');
         // Fallback to URL method
         const calendarUrl = generateGoogleCalendarUrl(bookingData);
-        appendCalendarDebug('Falling back to calendar URL', calendarUrl);
         const popup = window.open(calendarUrl, '_blank', 'noopener,noreferrer');
         if (!popup) {
-          appendCalendarDebug('Fallback failed', 'Popup blocked');
           setError('Google Calendar popup was blocked. Allow popups and try again.');
         } else {
-          appendCalendarDebug('Fallback success', 'Popup opened');
           setCalendarAdded(true);
         }
       }
       setAddingToCalendar(false);
     } else {
       // Open Google Calendar URL in new tab
-      setError('');
-      appendCalendarDebug('No OAuth token', 'Using calendar URL fallback only');
       const calendarUrl = generateGoogleCalendarUrl(bookingData);
-      appendCalendarDebug('Generated calendar URL', calendarUrl);
       const popup = window.open(calendarUrl, '_blank', 'noopener,noreferrer');
       if (!popup) {
-        appendCalendarDebug('Fallback failed', 'Popup blocked');
         setError('Google Calendar popup was blocked. Allow popups and try again.');
         return;
       }
-      appendCalendarDebug('Fallback success', 'Popup opened');
       setCalendarAdded(true);
     }
   };
@@ -313,6 +293,28 @@ function BookingModal({ booking, slot, onClose }) {
         )}
 
         <form onSubmit={handleSubmit} className="booking-form">
+          {isAdmin() && (
+            <div className="form-row">
+              <div className="form-group">
+                <label>Book For</label>
+                <select
+                  name="userId"
+                  value={formData.userId}
+                  onChange={handleChange}
+                  disabled={!canEdit}
+                  required
+                >
+                  <option value="">Select User</option>
+                  {(users || []).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email || u.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="form-row">
             <div className="form-group">
               <label>Helicopter</label>
@@ -500,21 +502,6 @@ function BookingModal({ booking, slot, onClose }) {
                   </span>
                 </div>
               )}
-              <div className="summary-row">
-                <span>Estimated Cost:</span>
-                <span className="cost">${estimatedCost.toLocaleString()}</span>
-              </div>
-            </div>
-          )}
-
-          {calendarDebug.length > 0 && (
-            <div className="calendar-debug-panel">
-              <div className="calendar-debug-header">Google Calendar Debug</div>
-              <div className="calendar-debug-lines">
-                {calendarDebug.map((line, index) => (
-                  <div key={`${index}-${line}`} className="calendar-debug-line">{line}</div>
-                ))}
-              </div>
             </div>
           )}
 

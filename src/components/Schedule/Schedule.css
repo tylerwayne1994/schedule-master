@@ -185,37 +185,6 @@
   color: #94a3b8;
 }
 
-.calendar-debug-panel {
-  margin-top: 16px;
-  border: 1px solid #d9e2ec;
-  border-radius: 14px;
-  background: #fbfcfe;
-  overflow: hidden;
-}
-
-.calendar-debug-header {
-  padding: 10px 12px;
-  background: #e2e8f0;
-  color: #334155;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.calendar-debug-lines {
-  max-height: 180px;
-  overflow: auto;
-  padding: 10px 12px;
-}
-
-.calendar-debug-line {
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: #334155;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .checkbox-group {
   margin-top: 4px;
 }
@@ -341,7 +310,7 @@
   border-bottom: 1px solid #c0c8d0;
   background: #fff;
   position: relative;
-  height: 20px;
+  height: 32px;
 }
 
 .resource-info {
@@ -358,7 +327,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 20px;
+  height: 32px;
   overflow: hidden;
 }
 
@@ -391,7 +360,7 @@
   display: flex;
   position: relative;
   z-index: 1;
-  height: 20px;
+  height: 32px;
 }
 
 .day-slots {
@@ -405,7 +374,7 @@
   background-position: 0 0;
   background-repeat: repeat;
   overflow: hidden;
-  height: 20px;
+  height: 32px;
 }
 
 .day-slots.today {
@@ -415,7 +384,7 @@
 .time-slot {
   width: var(--slot-width);
   min-width: var(--slot-width);
-  height: 20px;
+  height: 32px;
   border: 0;
   cursor: pointer;
   transition: background 0.15s;

@@ -119,7 +119,7 @@ function ScheduleGrid() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (helicopter, day, e) => {
+  const handleDrop = async (helicopter, day, e) => {
     e.preventDefault();
     if (!draggedBooking) return;
 
@@ -142,7 +142,7 @@ function ScheduleGrid() {
     const newEndTime = newEndDate.getHours() + (newEndDate.getMinutes() >= 30 ? 0.5 : 0);
 
     // Update the booking
-    const result = updateBooking(draggedBooking.id, {
+    const result = await updateBooking(draggedBooking.id, {
       helicopterId: helicopter.id,
       date: format(day, 'yyyy-MM-dd'),
       endDate: format(newEndDate, 'yyyy-MM-dd'),
