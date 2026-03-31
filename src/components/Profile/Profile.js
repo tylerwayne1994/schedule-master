@@ -37,8 +37,8 @@ function Profile() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = () => {
-    updateUser(currentUser.id, formData);
+  const handleSave = async () => {
+    await updateUser(currentUser.id, formData);
     setIsEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
