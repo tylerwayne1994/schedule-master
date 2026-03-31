@@ -209,7 +209,7 @@ function HelicopterManagement() {
               />
             </div>
             <div className="form-group">
-              <label>50hr Inspection Last Completed At (hrs)</label>
+              <label>50hr Inspection Due At (hrs)</label>
               <input
                 type="number"
                 step="0.1"
@@ -220,7 +220,7 @@ function HelicopterManagement() {
               />
             </div>
             <div className="form-group">
-              <label>100hr Inspection Last Completed At (hrs)</label>
+              <label>100hr Inspection Due At (hrs)</label>
               <input
                 type="number"
                 step="0.1"
@@ -259,10 +259,10 @@ function HelicopterManagement() {
           {helicopters.map(h => {
             const hobbsTime = h.hobbsTime || 0;
             const completedHours = getCompletedFlightHoursForHelicopter(h.id);
-            const next50 = h.inspection50Hour != null ? (parseFloat(h.inspection50Hour) + 50) : null;
-            const next100 = h.inspection100Hour != null ? (parseFloat(h.inspection100Hour) + 100) : null;
-            const remaining50 = next50 != null ? (next50 - completedHours) : null;
-            const remaining100 = next100 != null ? (next100 - completedHours) : null;
+            const due50 = h.inspection50Hour != null ? parseFloat(h.inspection50Hour) : null;
+            const due100 = h.inspection100Hour != null ? parseFloat(h.inspection100Hour) : null;
+            const remaining50 = due50 != null ? (due50 - hobbsTime) : null;
+            const remaining100 = due100 != null ? (due100 - hobbsTime) : null;
             return (
             <tr key={h.id}>
               <td className="tail-number">{h.tailNumber}</td>
