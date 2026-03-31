@@ -329,6 +329,7 @@ function AdminDashboard() {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .is('recipient_user_id', null)
         .order('created_at', { ascending: false })
         .limit(20);
 

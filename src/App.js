@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ScheduleProvider } from './contexts/ScheduleContext';
 import { useSchedule } from './contexts/ScheduleContext';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
 import { LoadingOverlay } from './components/LoadingSpinner';
 import OfflineBanner from './components/OfflineBanner';
@@ -13,6 +14,7 @@ import MyBookings from './components/MyBookings/MyBookings';
 import Profile from './components/Profile/Profile';
 import { AdminDashboard, HelicopterManagement, UserManagement, InstructorManagement, BookingListManagement, MaintenanceManagement, AdminScheduleManagement } from './components/Admin/AdminPanel';
 import CompleteFlightModal from './components/Notifications/CompleteFlightModal';
+import UserNotificationModal from './components/Notifications/UserNotificationModal';
 import './App.css';
 import './styles/responsive.css';
 import './styles/accessibility.css';
@@ -23,6 +25,8 @@ function AppContent() {
   const [authMode, setAuthMode] = useState('login');
   const [currentPage, setCurrentPage] = useState('schedule');
   const [dismissedBookingId, setDismissedBookingId] = useState(null);
+  const [userNotifications, setUserNotifications] = useState([]);
+  const [notificationBusy, setNotificationBusy] = useState(false);
 
   const userId = currentUser?.id;
 
@@ -54,6 +58,49 @@ function AppContent() {
         return aEnd - bEnd;
       })[0];
   }, [bookings, userId, dismissedBookingId]);
+
+  React.useEffect(() => {
+    const loadUserNotifications = async () => {
+      if (!currentUser?.id || !isSupabaseConfigured()) {
+        setUserNotifications([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_user_id', currentUser.id)
+        .is('read_at', null)
+        .order('created_at', { ascending: true })
+        .limit(10);
+
+      if (!error && data) {
+        setUserNotifications(data);
+      }
+    };
+
+    loadUserNotifications();
+  }, [currentUser?.id]);
+
+  const activeUserNotification = userNotifications[0] || null;
+
+  const markUserNotificationRead = async (notificationId) => {
+    if (!notificationId || !isSupabaseConfigured()) {
+      setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
+      return;
+    }
+
+    setNotificationBusy(true);
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+    setNotificationBusy(false);
+
+    if (!error) {
+      setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
+    }
+  };
 
   if (loading) {
     return <LoadingOverlay text="Loading..." />;
@@ -108,6 +155,15 @@ function AppContent() {
         <CompleteFlightModal
           booking={pendingCompletion}
           onClose={() => setDismissedBookingId(pendingCompletion.id)}
+        />
+      )}
+
+      {activeUserNotification && (
+        <UserNotificationModal
+          notification={activeUserNotification}
+          busy={notificationBusy}
+          onMarkRead={markUserNotificationRead}
+          onClose={() => markUserNotificationRead(activeUserNotification.id)}
         />
       )}
     </div>
