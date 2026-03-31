@@ -380,10 +380,10 @@ function AdminDashboard() {
       } else if (error) {
         setNotifications([]);
         setNotificationsError(error.message || 'Unable to load notifications');
-      }
+                          <label>50hr Inspection Due At (hrs)</label>
 
       setNotificationsLoading(false);
-    };
+                          <label>100hr Inspection Due At (hrs)</label>
 
     loadNotifications();
   }, [isAdmin]);
