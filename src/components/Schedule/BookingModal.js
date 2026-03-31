@@ -512,7 +512,7 @@ function BookingModal({ booking, slot, onClose }) {
               </button>
             )}
             
-            {isEditing && selectedHelicopter && (
+            {selectedHelicopter && canEdit && (
               <button 
                 type="button" 
                 className="btn-calendar"
