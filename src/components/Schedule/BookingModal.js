@@ -41,7 +41,7 @@ function BookingModal({ booking, slot, onClose }) {
     customerPhone: booking?.customerPhone || '',
     customerEmail: booking?.customerEmail || currentUser?.email || '',
     instructorId: booking?.instructorId || '',
-    type: booking?.type || 'flight',
+    type: booking?.type || 'training',
     notes: booking?.notes || ''
   });
 
@@ -455,10 +455,10 @@ function BookingModal({ booking, slot, onClose }) {
               onChange={handleChange}
               disabled={!canEdit}
             >
-              <option value="flight">Flight Training</option>
+              <option value="training">Flight Training</option>
               <option value="rental">Rental</option>
               <option value="tour">Tour</option>
-              <option value="charter">Charter</option>
+              <option value="checkride">Checkride</option>
               {isAdmin() && <option value="maintenance">Maintenance</option>}
             </select>
           </div>

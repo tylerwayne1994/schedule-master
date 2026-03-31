@@ -19,6 +19,17 @@ const DEFAULT_INSTRUCTORS = [
   { id: 'inst-003', name: 'Mike Davis', certifications: ['CFI'], status: 'active' },
 ];
 
+const normalizeBookingType = (value) => {
+  switch (value) {
+    case 'flight':
+      return 'training';
+    case 'charter':
+      return 'tour';
+    default:
+      return value || 'training';
+  }
+};
+
 export function ScheduleProvider({ children }) {
   const [helicopters, setHelicopters] = useState([]);
   const [instructors, setInstructors] = useState([]);
@@ -37,7 +48,7 @@ export function ScheduleProvider({ children }) {
     customerName: b.customer_name || '',
     customerPhone: b.customer_phone || '',
     customerEmail: b.customer_email || '',
-    type: b.type || 'flight',
+    type: normalizeBookingType(b.flight_type || b.type),
     notes: b.notes || '',
     status: b.status || 'confirmed',
     actualHours: b.actual_hours != null ? (typeof b.actual_hours === 'number' ? b.actual_hours : parseFloat(b.actual_hours)) : null,
@@ -59,7 +70,7 @@ export function ScheduleProvider({ children }) {
     customer_name: booking.customerName || null,
     customer_phone: booking.customerPhone || null,
     customer_email: booking.customerEmail || null,
-    type: booking.type || 'flight',
+    flight_type: normalizeBookingType(booking.type),
     notes: booking.notes || null,
     status: booking.status || 'confirmed',
     actual_hours: booking.actualHours ?? null,

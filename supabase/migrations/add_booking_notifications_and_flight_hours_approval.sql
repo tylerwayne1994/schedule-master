@@ -20,7 +20,7 @@ DECLARE
   v_user_name TEXT;
   v_tail_number TEXT;
 BEGIN
-  IF NEW.type = 'maintenance' OR NEW.status = 'cancelled' THEN
+  IF NEW.flight_type = 'maintenance' OR NEW.status = 'cancelled' THEN
     RETURN NEW;
   END IF;
 

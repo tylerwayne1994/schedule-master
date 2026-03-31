@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import './Profile.css';
@@ -17,9 +17,19 @@ function Profile() {
     address: currentUser?.address || ''
   });
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
+
+  useEffect(() => {
+    setFormData({
+      name: currentUser?.name || '',
+      email: currentUser?.email || '',
+      phone: currentUser?.phone || '',
+      address: currentUser?.address || ''
+    });
+  }, [currentUser]);
 
   const myBookings = getUserBookings(currentUser?.id) || [];
   const completedFlights = myBookings.filter(b => b.status === 'completed').length;
@@ -38,7 +48,12 @@ function Profile() {
   };
 
   const handleSave = async () => {
-    await updateUser(currentUser.id, formData);
+    setSaveError('');
+    const result = await updateUser(currentUser.id, formData);
+    if (!result?.success) {
+      setSaveError(result?.error || 'Unable to save profile changes');
+      return;
+    }
     setIsEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -89,6 +104,7 @@ function Profile() {
         </div>
 
         {saved && <div className="save-success">Profile updated successfully!</div>}
+        {saveError && <div className="save-error">{saveError}</div>}
 
         {/* Admin PIN Modal */}
         {showPinModal && (
@@ -203,8 +219,8 @@ function Profile() {
 
             {isEditing && (
               <div className="form-actions">
-                <button className="btn-save" onClick={handleSave}>Save Changes</button>
-                <button className="btn-cancel" onClick={() => setIsEditing(false)}>Cancel</button>
+                <button type="button" className="btn-save" onClick={handleSave}>Save Changes</button>
+                <button type="button" className="btn-cancel" onClick={() => setIsEditing(false)}>Cancel</button>
               </div>
             )}
           </div>

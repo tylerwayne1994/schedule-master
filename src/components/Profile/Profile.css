@@ -57,6 +57,16 @@
   border: 1px solid #bbf7d0;
 }
 
+.save-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  border: 1px solid #fecaca;
+}
+
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
