@@ -157,14 +157,22 @@ function BookingModal({ booking, slot, onClose }) {
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
-      await deleteBooking(booking.id);
+      const result = await deleteBooking(booking.id);
+      if (!result?.success) {
+        setError(result?.error || 'Unable to delete booking');
+        return;
+      }
       onClose();
     }
   };
 
   const handleCancel = async () => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {
-      await cancelBooking(booking.id);
+      const result = await cancelBooking(booking.id);
+      if (!result?.success) {
+        setError(result?.error || 'Unable to cancel booking');
+        return;
+      }
       onClose();
     }
   };

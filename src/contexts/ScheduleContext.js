@@ -425,11 +425,22 @@ export function ScheduleProvider({ children }) {
     };
 
     if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert(mapBookingToDb(newBooking))
-        .select()
-        .single();
+      const payload = mapBookingToDb(newBooking);
+      const { data, error } = await supabase.rpc('create_booking_record', {
+        p_user_id: payload.user_id,
+        p_helicopter_id: payload.helicopter_id,
+        p_date: payload.date,
+        p_end_date: payload.end_date,
+        p_start_time: payload.start_time,
+        p_end_time: payload.end_time,
+        p_instructor_id: payload.instructor_id,
+        p_customer_name: payload.customer_name,
+        p_customer_phone: payload.customer_phone,
+        p_customer_email: payload.customer_email,
+        p_flight_type: payload.flight_type,
+        p_notes: payload.notes,
+        p_status: payload.status
+      });
 
       if (data && !error) {
         const saved = mapBookingFromDb(data);
@@ -463,14 +474,38 @@ export function ScheduleProvider({ children }) {
 
     if (isSupabaseConfigured()) {
       const dbUpdates = mapBookingToDb({ ...existingBooking, ...updates, id });
-      const { error } = await supabase
-        .from('bookings')
-        .update(dbUpdates)
-        .eq('id', id);
+      const { data, error } = await supabase.rpc('update_booking_record', {
+        p_booking_id: id,
+        p_user_id: dbUpdates.user_id,
+        p_helicopter_id: dbUpdates.helicopter_id,
+        p_date: dbUpdates.date,
+        p_end_date: dbUpdates.end_date,
+        p_start_time: dbUpdates.start_time,
+        p_end_time: dbUpdates.end_time,
+        p_instructor_id: dbUpdates.instructor_id,
+        p_customer_name: dbUpdates.customer_name,
+        p_customer_phone: dbUpdates.customer_phone,
+        p_customer_email: dbUpdates.customer_email,
+        p_flight_type: dbUpdates.flight_type,
+        p_notes: dbUpdates.notes,
+        p_status: dbUpdates.status,
+        p_actual_hours: dbUpdates.actual_hours,
+        p_actual_hours_submitted_at: dbUpdates.actual_hours_submitted_at,
+        p_actual_hours_status: dbUpdates.actual_hours_status,
+        p_actual_hours_approved_at: dbUpdates.actual_hours_approved_at,
+        p_actual_hours_approved_by: dbUpdates.actual_hours_approved_by
+      });
 
       if (error) {
         console.error('Failed to update booking:', error);
         return { success: false, error: error?.message || 'Unable to update booking' };
+      }
+
+      if (data) {
+        setBookings(prev => prev.map(b => 
+          b.id === id ? mapBookingFromDb(data) : b
+        ));
+        return { success: true };
       }
     }
 
@@ -483,14 +518,20 @@ export function ScheduleProvider({ children }) {
 
   const cancelBooking = async (id) => {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', id);
+      const { data, error } = await supabase.rpc('cancel_booking_record', {
+        p_booking_id: id
+      });
 
       if (error) {
         console.error('Failed to cancel booking:', error);
         return { success: false, error: error?.message || 'Unable to cancel booking' };
+      }
+
+      if (data) {
+        setBookings(prev => prev.map(b => 
+          b.id === id ? mapBookingFromDb(data) : b
+        ));
+        return { success: true };
       }
     }
 
@@ -502,10 +543,9 @@ export function ScheduleProvider({ children }) {
 
   const deleteBooking = async (id) => {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.rpc('delete_booking_record', {
+        p_booking_id: id
+      });
 
       if (error) {
         console.error('Failed to delete booking:', error);
