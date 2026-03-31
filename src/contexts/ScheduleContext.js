@@ -43,6 +43,8 @@ const formatSupabaseError = (error, fallbackMessage) => {
   return parts.length > 0 ? parts.join(' | ') : fallbackMessage;
 };
 
+const bookingOwnerMismatchMessage = 'Booking saved with the wrong user assignment. Refresh and try again.';
+
 export function ScheduleProvider({ children }) {
   const [helicopters, setHelicopters] = useState([]);
   const [instructors, setInstructors] = useState([]);
@@ -92,6 +94,20 @@ export function ScheduleProvider({ children }) {
     actual_hours_approved_at: booking.actualHoursApprovedAt ?? null,
     actual_hours_approved_by: booking.actualHoursApprovedBy ?? null
   });
+
+  const fetchBookingById = async (bookingId) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', bookingId)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: formatSupabaseError(error, 'Unable to load saved booking') };
+    }
+
+    return { success: true, booking: mapBookingFromDb(data) };
+  };
 
   // Load helicopters from Supabase
   const loadHelicopters = async () => {
@@ -439,6 +455,7 @@ export function ScheduleProvider({ children }) {
 
     if (isSupabaseConfigured()) {
       const payload = mapBookingToDb(newBooking);
+      const expectedUserId = payload.user_id;
       const { data, error } = await supabase.rpc('create_booking_record', {
         p_user_id: payload.user_id,
         p_helicopter_id: payload.helicopter_id,
@@ -456,7 +473,17 @@ export function ScheduleProvider({ children }) {
       });
 
       if (data && !error) {
-        const saved = mapBookingFromDb(data);
+        const hydrated = await fetchBookingById(data.id);
+        if (!hydrated.success) {
+          return hydrated;
+        }
+
+        const saved = hydrated.booking;
+        if (saved.userId !== expectedUserId) {
+          console.error('Booking owner mismatch after RPC create:', { expectedUserId, actualUserId: saved.userId, bookingId: saved.id });
+          return { success: false, error: bookingOwnerMismatchMessage };
+        }
+
         setBookings(prev => [saved, ...prev]);
         return { success: true, booking: saved };
       }
@@ -484,7 +511,17 @@ export function ScheduleProvider({ children }) {
         .single();
 
       if (directData && !directError) {
-        const saved = mapBookingFromDb(directData);
+        const hydrated = await fetchBookingById(directData.id);
+        if (!hydrated.success) {
+          return hydrated;
+        }
+
+        const saved = hydrated.booking;
+        if (saved.userId !== expectedUserId) {
+          console.error('Booking owner mismatch after direct create:', { expectedUserId, actualUserId: saved.userId, bookingId: saved.id });
+          return { success: false, error: bookingOwnerMismatchMessage };
+        }
+
         setBookings(prev => [saved, ...prev]);
         return { success: true, booking: saved };
       }
@@ -519,6 +556,7 @@ export function ScheduleProvider({ children }) {
 
     if (isSupabaseConfigured()) {
       const dbUpdates = mapBookingToDb({ ...existingBooking, ...updates, id });
+      const expectedUserId = dbUpdates.user_id;
       const { data, error } = await supabase.rpc('update_booking_record', {
         p_booking_id: id,
         p_user_id: dbUpdates.user_id,
@@ -547,10 +585,21 @@ export function ScheduleProvider({ children }) {
       }
 
       if (data) {
+        const hydrated = await fetchBookingById(id);
+        if (!hydrated.success) {
+          return hydrated;
+        }
+
+        const saved = hydrated.booking;
+        if (saved.userId !== expectedUserId) {
+          console.error('Booking owner mismatch after update:', { expectedUserId, actualUserId: saved.userId, bookingId: id });
+          return { success: false, error: bookingOwnerMismatchMessage };
+        }
+
         setBookings(prev => prev.map(b => 
-          b.id === id ? mapBookingFromDb(data) : b
+          b.id === id ? saved : b
         ));
-        return { success: true };
+        return { success: true, booking: saved };
       }
     }
 
