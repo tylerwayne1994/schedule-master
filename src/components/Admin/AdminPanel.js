@@ -216,7 +216,7 @@ function HelicopterManagement() {
                 value={formData.inspection50Hour}
                 onChange={(e) => setFormData(prev => ({ ...prev, inspection50Hour: e.target.value }))}
                 min="0"
-                placeholder="Total completed flight hours"
+                placeholder="Hobbs time when due"
               />
             </div>
             <div className="form-group">
@@ -227,7 +227,7 @@ function HelicopterManagement() {
                 value={formData.inspection100Hour}
                 onChange={(e) => setFormData(prev => ({ ...prev, inspection100Hour: e.target.value }))}
                 min="0"
-                placeholder="Total completed flight hours"
+                placeholder="Hobbs time when due"
               />
             </div>
           </div>
@@ -258,7 +258,6 @@ function HelicopterManagement() {
         <tbody>
           {helicopters.map(h => {
             const hobbsTime = h.hobbsTime || 0;
-            const completedHours = getCompletedFlightHoursForHelicopter(h.id);
             const due50 = h.inspection50Hour != null ? parseFloat(h.inspection50Hour) : null;
             const due100 = h.inspection100Hour != null ? parseFloat(h.inspection100Hour) : null;
             const remaining50 = due50 != null ? (due50 - hobbsTime) : null;
@@ -378,9 +377,12 @@ function AdminDashboard() {
       if (data && !error) {
         setNotifications(data);
       } else if (error) {
-      	setNotifications([]);
-      	setNotificationsError(error.message || 'Unable to load notifications');
-      	setNotificationsLoading(false);
+        setNotifications([]);
+        setNotificationsError(error.message || 'Unable to load notifications');
+      }
+
+      setNotificationsLoading(false);
+    };
 
     loadNotifications();
   }, [isAdmin]);
