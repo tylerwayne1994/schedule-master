@@ -172,12 +172,20 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    if (isSupabaseConfigured()) {
-      await supabase.auth.signOut();
+    try {
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut({ scope: 'global' });
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setCurrentUser(null);
+      setSession(null);
+      setUsers([]);
+      localStorage.removeItem('nlh_session');
+      localStorage.removeItem('currentUser');
+      window.location.replace(window.location.origin);
     }
-    setCurrentUser(null);
-    setSession(null);
-    localStorage.removeItem('nlh_session');
   };
 
   const register = async (email, password, name) => {
