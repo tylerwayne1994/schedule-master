@@ -139,13 +139,20 @@ function ScheduleGrid() {
     const newStartDate = new Date(`${format(day, 'yyyy-MM-dd')}T00:00:00`);
     newStartDate.setHours(Math.floor(newStartTime), newStartTime % 1 === 0.5 ? 30 : 0, 0, 0);
     const newEndDate = new Date(newStartDate.getTime() + durationMs);
-    const newEndTime = newEndDate.getHours() + (newEndDate.getMinutes() >= 30 ? 0.5 : 0);
+    let resolvedEndDate = newEndDate;
+    let newEndTime = newEndDate.getHours() + (newEndDate.getMinutes() >= 30 ? 0.5 : 0);
+
+    // The database represents midnight as 24:00 on the previous day, not 0:00 on the next day.
+    if (newEndDate.getHours() === 0 && newEndDate.getMinutes() === 0) {
+      resolvedEndDate = new Date(newEndDate.getTime() - (24 * 60 * 60 * 1000));
+      newEndTime = 24;
+    }
 
     // Update the booking
     const result = await updateBooking(draggedBooking.id, {
       helicopterId: helicopter.id,
       date: format(day, 'yyyy-MM-dd'),
-      endDate: format(newEndDate, 'yyyy-MM-dd'),
+      endDate: format(resolvedEndDate, 'yyyy-MM-dd'),
       startTime: newStartTime,
       endTime: newEndTime
     });
