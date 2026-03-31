@@ -30,6 +30,19 @@ const normalizeBookingType = (value) => {
   }
 };
 
+const formatSupabaseError = (error, fallbackMessage) => {
+  if (!error) {
+    return fallbackMessage;
+  }
+
+  const parts = [error.message, error.details, error.hint].filter(Boolean);
+  if (error.code) {
+    parts.push(`code: ${error.code}`);
+  }
+
+  return parts.length > 0 ? parts.join(' | ') : fallbackMessage;
+};
+
 export function ScheduleProvider({ children }) {
   const [helicopters, setHelicopters] = useState([]);
   const [instructors, setInstructors] = useState([]);
@@ -448,8 +461,40 @@ export function ScheduleProvider({ children }) {
         return { success: true, booking: saved };
       }
 
-      console.error('Failed to create booking:', error);
-      return { success: false, error: error?.message || 'Unable to create booking' };
+      const directInsertPayload = {
+        user_id: payload.user_id,
+        helicopter_id: payload.helicopter_id,
+        date: payload.date,
+        end_date: payload.end_date,
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        instructor_id: payload.instructor_id,
+        customer_name: payload.customer_name,
+        customer_phone: payload.customer_phone,
+        customer_email: payload.customer_email,
+        flight_type: payload.flight_type,
+        notes: payload.notes,
+        status: payload.status
+      };
+
+      const { data: directData, error: directError } = await supabase
+        .from('bookings')
+        .insert(directInsertPayload)
+        .select()
+        .single();
+
+      if (directData && !directError) {
+        const saved = mapBookingFromDb(directData);
+        setBookings(prev => [saved, ...prev]);
+        return { success: true, booking: saved };
+      }
+
+      console.error('Failed to create booking via RPC:', error);
+      console.error('Failed to create booking via direct insert:', directError);
+      return {
+        success: false,
+        error: formatSupabaseError(directError || error, 'Unable to create booking')
+      };
     }
 
     setBookings(prev => [...prev, newBooking]);
