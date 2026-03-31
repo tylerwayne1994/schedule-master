@@ -42,6 +42,9 @@ export function ScheduleProvider({ children }) {
     status: b.status || 'confirmed',
     actualHours: b.actual_hours != null ? (typeof b.actual_hours === 'number' ? b.actual_hours : parseFloat(b.actual_hours)) : null,
     actualHoursSubmittedAt: b.actual_hours_submitted_at || null,
+    actualHoursStatus: b.actual_hours_status || 'not_submitted',
+    actualHoursApprovedAt: b.actual_hours_approved_at || null,
+    actualHoursApprovedBy: b.actual_hours_approved_by || null,
     createdAt: b.created_at
   });
 
@@ -60,7 +63,10 @@ export function ScheduleProvider({ children }) {
     notes: booking.notes || null,
     status: booking.status || 'confirmed',
     actual_hours: booking.actualHours ?? null,
-    actual_hours_submitted_at: booking.actualHoursSubmittedAt ?? null
+    actual_hours_submitted_at: booking.actualHoursSubmittedAt ?? null,
+    actual_hours_status: booking.actualHoursStatus ?? 'not_submitted',
+    actual_hours_approved_at: booking.actualHoursApprovedAt ?? null,
+    actual_hours_approved_by: booking.actualHoursApprovedBy ?? null
   });
 
   // Load helicopters from Supabase
@@ -500,7 +506,7 @@ export function ScheduleProvider({ children }) {
     return { success: true };
   };
 
-  const completeFlightHours = async (bookingId, actualHours) => {
+  const submitFlightHours = async (bookingId, actualHours) => {
     const hours = parseFloat(actualHours);
     if (!Number.isFinite(hours) || hours <= 0) {
       return { success: false, error: 'Enter a valid flight time' };
@@ -512,26 +518,66 @@ export function ScheduleProvider({ children }) {
     }
 
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.rpc('complete_flight', {
+      const { error } = await supabase.rpc('submit_flight_hours', {
         p_booking_id: bookingId,
         p_actual_hours: hours
       });
 
       if (error) {
-        console.error('Failed to complete flight:', error);
-        return { success: false, error: error?.message || 'Unable to complete flight' };
+        console.error('Failed to submit flight hours:', error);
+        return { success: false, error: error?.message || 'Unable to submit flight hours' };
       }
     }
 
     setBookings(prev => prev.map(b => (
       b.id === bookingId
-        ? { ...b, actualHours: hours, actualHoursSubmittedAt: new Date().toISOString(), status: 'completed' }
+        ? {
+            ...b,
+            actualHours: hours,
+            actualHoursSubmittedAt: new Date().toISOString(),
+            actualHoursStatus: 'pending'
+          }
+        : b
+    )));
+
+    return { success: true };
+  };
+
+  const approveFlightHours = async (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      return { success: false, error: 'Booking not found' };
+    }
+
+    if (!Number.isFinite(parseFloat(booking.actualHours)) || booking.actualHoursStatus !== 'pending') {
+      return { success: false, error: 'Booking does not have pending submitted hours' };
+    }
+
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.rpc('approve_flight_hours', {
+        p_booking_id: bookingId
+      });
+
+      if (error) {
+        console.error('Failed to approve flight hours:', error);
+        return { success: false, error: error?.message || 'Unable to approve flight hours' };
+      }
+    }
+
+    setBookings(prev => prev.map(b => (
+      b.id === bookingId
+        ? {
+            ...b,
+            status: 'completed',
+            actualHoursStatus: 'approved',
+            actualHoursApprovedAt: new Date().toISOString()
+          }
         : b
     )));
 
     setHelicopters(prev => prev.map(h => (
       h.id === booking.helicopterId
-        ? { ...h, hobbsTime: (parseFloat(h.hobbsTime) || 0) + hours }
+        ? { ...h, hobbsTime: (parseFloat(h.hobbsTime) || 0) + parseFloat(booking.actualHours || 0) }
         : h
     )));
 
@@ -574,7 +620,9 @@ export function ScheduleProvider({ children }) {
     updateBooking,
     cancelBooking,
     deleteBooking,
-    completeFlightHours,
+    submitFlightHours,
+    approveFlightHours,
+    completeFlightHours: submitFlightHours,
     getBookingsForDate,
     getBookingsForHelicopter,
     getUserBookings,

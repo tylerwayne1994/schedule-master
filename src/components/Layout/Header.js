@@ -40,6 +40,12 @@ function Header({ currentPage, onNavigate }) {
               Admin
             </button>
             <button 
+              className={currentPage === 'admin-schedule' ? 'active' : ''}
+              onClick={() => onNavigate('admin-schedule')}
+            >
+              Admin Schedule
+            </button>
+            <button 
               className={currentPage === 'helicopters' ? 'active' : ''}
               onClick={() => onNavigate('helicopters')}
             >

@@ -11,7 +11,7 @@ import Header from './components/Layout/Header';
 import ScheduleGrid from './components/Schedule/ScheduleGrid';
 import MyBookings from './components/MyBookings/MyBookings';
 import Profile from './components/Profile/Profile';
-import { AdminDashboard, HelicopterManagement, UserManagement, InstructorManagement, BookingListManagement, MaintenanceManagement } from './components/Admin/AdminPanel';
+import { AdminDashboard, HelicopterManagement, UserManagement, InstructorManagement, BookingListManagement, MaintenanceManagement, AdminScheduleManagement } from './components/Admin/AdminPanel';
 import CompleteFlightModal from './components/Notifications/CompleteFlightModal';
 import './App.css';
 import './styles/responsive.css';
@@ -45,6 +45,7 @@ function AppContent() {
       .filter(b => b.userId === userId)
       .filter(b => (b.status || 'confirmed') === 'confirmed')
       .filter(b => (b.actualHours == null))
+      .filter(b => (b.actualHoursStatus || 'not_submitted') === 'not_submitted')
       .filter(b => b.id !== dismissedBookingId)
       .filter(isPastEndPlusOneMinute)
       .sort((a, b) => {
@@ -76,6 +77,8 @@ function AppContent() {
         return <Profile />;
       case 'admin':
         return <AdminDashboard />;
+      case 'admin-schedule':
+        return <AdminScheduleManagement />;
       case 'helicopters':
         return <HelicopterManagement />;
       case 'bookings':

@@ -4,6 +4,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import BookingModal from '../Schedule/BookingModal';
+import ScheduleGrid from '../Schedule/ScheduleGrid';
 import './Admin.css';
 
 function formatAdminTime(decimal) {
@@ -33,7 +34,7 @@ function getBookingSegmentForDate(booking, dateStr) {
 }
 
 function HelicopterManagement() {
-  const { helicopters, bookings, addHelicopter, updateHelicopter, deleteHelicopter } = useSchedule();
+  const { helicopters, addHelicopter, updateHelicopter, deleteHelicopter } = useSchedule();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -45,50 +46,6 @@ function HelicopterManagement() {
     inspection50Hour: '',
     inspection100Hour: ''
   });
-
-  const getBookingEndDateTime = (booking) => {
-    const endDateStr = booking.endDate || booking.date;
-    const end = new Date(`${endDateStr}T00:00:00`);
-    const hours = typeof booking.endTime === 'number' ? booking.endTime : parseFloat(booking.endTime);
-    const hourInt = Math.floor(hours);
-    const minutes = hours % 1 === 0.5 ? 30 : 0;
-    end.setHours(hourInt, minutes, 0, 0);
-    return end;
-  };
-
-  const getBookingDurationHours = (booking) => {
-    const startDateStr = booking.date;
-    const endDateStr = booking.endDate || booking.date;
-
-    const startDate = new Date(`${startDateStr}T00:00:00`);
-    const endDate = new Date(`${endDateStr}T00:00:00`);
-    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-    const startTime = typeof booking.startTime === 'number' ? booking.startTime : parseFloat(booking.startTime);
-    const endTime = typeof booking.endTime === 'number' ? booking.endTime : parseFloat(booking.endTime);
-
-    if (daysDiff <= 0) {
-      return endTime - startTime;
-    }
-
-    const hoursFirstDay = 24 - startTime;
-    const hoursLastDay = endTime;
-    const fullDaysHours = Math.max(0, (daysDiff - 1) * 24);
-    return hoursFirstDay + fullDaysHours + hoursLastDay;
-  };
-
-  const getCompletedFlightHoursForHelicopter = (helicopterId) => {
-    const now = new Date();
-    return (bookings || [])
-      .filter(b => b.helicopterId === helicopterId)
-      .filter(b => b.status !== 'cancelled')
-      .filter(b => getBookingEndDateTime(b) <= now)
-      .reduce((sum, b) => {
-        const actual = b.actualHours != null ? parseFloat(b.actualHours) : null;
-        if (Number.isFinite(actual) && actual > 0) return sum + actual;
-        return sum + (getBookingDurationHours(b) || 0);
-      }, 0);
-  };
 
   const resetForm = () => {
     setFormData({
@@ -351,14 +308,15 @@ function UserManagement() {
 }
 
 function AdminDashboard() {
-  const { helicopters, bookings, instructors } = useSchedule();
+  const { helicopters, bookings, instructors, approveFlightHours } = useSchedule();
   const { users, isAdmin } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState('');
+  const [notificationActionError, setNotificationActionError] = useState('');
+  const [approvingBookingId, setApprovingBookingId] = useState(null);
 
-  React.useEffect(() => {
-    const loadNotifications = async () => {
+  const loadNotifications = React.useCallback(async () => {
       if (!isAdmin()) return;
       if (!isSupabaseConfigured()) {
         setNotifications([]);
@@ -382,10 +340,25 @@ function AdminDashboard() {
       }
 
       setNotificationsLoading(false);
-    };
+    }, [isAdmin]);
 
+  React.useEffect(() => {
     loadNotifications();
-  }, [isAdmin]);
+  }, [loadNotifications]);
+
+  const handleApproveHours = async (bookingId) => {
+    setNotificationActionError('');
+    setApprovingBookingId(bookingId);
+    const result = await approveFlightHours(bookingId);
+    setApprovingBookingId(null);
+
+    if (!result?.success) {
+      setNotificationActionError(result?.error || 'Unable to approve flight hours');
+      return;
+    }
+
+    await loadNotifications();
+  };
   const compactWeekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), []);
   const compactWeekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(compactWeekStart, index)),
@@ -421,6 +394,9 @@ function AdminDashboard() {
             <span>Recent</span>
           </div>
           <div style={{ padding: 16 }}>
+            {notificationActionError && (
+              <div style={{ color: '#b91c1c', marginBottom: 12 }}>{notificationActionError}</div>
+            )}
             {notificationsLoading ? (
               <div style={{ color: '#6b7280' }}>Loading notifications…</div>
             ) : notificationsError ? (
@@ -428,12 +404,31 @@ function AdminDashboard() {
             ) : notifications.length === 0 ? (
               <div style={{ color: '#6b7280' }}>No notifications yet.</div>
             ) : (
-              notifications.map(n => (
-                <div key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid #eef2f7' }}>
-                  <div style={{ fontWeight: 600, color: '#111827' }}>{n.title || n.type}</div>
-                  <div style={{ color: '#6b7280' }}>{n.message}</div>
-                </div>
-              ))
+              notifications.map(n => {
+                const relatedBooking = bookings.find(b => b.id === n.booking_id);
+                const canApprove = n.type === 'flight_hours_submitted'
+                  && relatedBooking
+                  && relatedBooking.actualHoursStatus === 'pending';
+
+                return (
+                  <div key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid #eef2f7' }}>
+                    <div style={{ fontWeight: 600, color: '#111827' }}>{n.title || n.type}</div>
+                    <div style={{ color: '#6b7280' }}>{n.message}</div>
+                    {canApprove && (
+                      <div style={{ marginTop: 10 }}>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => handleApproveHours(relatedBooking.id)}
+                          disabled={approvingBookingId === relatedBooking.id}
+                        >
+                          {approvingBookingId === relatedBooking.id ? 'Approving...' : `Approve ${relatedBooking.actualHours} hrs`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -502,6 +497,10 @@ function AdminDashboard() {
       </div>
     </div>
   );
+}
+
+function AdminScheduleManagement() {
+  return <ScheduleGrid />;
 }
 
 function BookingListManagement() {
@@ -946,4 +945,4 @@ function InstructorManagement() {
   );
 }
 
-export { HelicopterManagement, UserManagement, AdminDashboard, InstructorManagement, BookingListManagement, MaintenanceManagement };
+export { HelicopterManagement, UserManagement, AdminDashboard, InstructorManagement, BookingListManagement, MaintenanceManagement, AdminScheduleManagement };

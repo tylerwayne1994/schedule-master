@@ -13,10 +13,11 @@ function formatTimeLabel(decimal) {
 }
 
 export default function CompleteFlightModal({ booking, onClose }) {
-  const { helicopters, completeFlightHours } = useSchedule();
+  const { helicopters, submitFlightHours } = useSchedule();
   const [actualHours, setActualHours] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState('confirm');
 
   const helicopter = useMemo(
     () => helicopters.find(h => h.id === booking.helicopterId),
@@ -35,11 +36,11 @@ export default function CompleteFlightModal({ booking, onClose }) {
     e.preventDefault();
     setError('');
     setSaving(true);
-    const result = await completeFlightHours(booking.id, actualHours);
+    const result = await submitFlightHours(booking.id, actualHours);
     setSaving(false);
 
     if (!result?.success) {
-      setError(result?.error || 'Unable to save flight time');
+      setError(result?.error || 'Unable to submit flight time');
       return;
     }
 
@@ -71,30 +72,50 @@ export default function CompleteFlightModal({ booking, onClose }) {
 
           {error && <div className="nlh-modal-error">{error}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <label className="nlh-modal-label">
-              Enter actual flight time (hrs)
-              <input
-                className="nlh-modal-input"
-                type="number"
-                step="0.1"
-                min="0.1"
-                value={actualHours}
-                onChange={(e) => setActualHours(e.target.value)}
-                required
-                autoFocus
-              />
-            </label>
-
-            <div className="nlh-modal-actions">
-              <button type="submit" className="btn-primary" disabled={saving}>
-                {saving ? 'Saving...' : 'Submit'}
-              </button>
-              <button type="button" className="btn-cancel" onClick={onClose} disabled={saving}>
-                Not now
-              </button>
+          {step === 'confirm' ? (
+            <div>
+              <div className="nlh-modal-hint">
+                Did you complete this flight?
+              </div>
+              <div className="nlh-modal-actions">
+                <button type="button" className="btn-primary" onClick={() => setStep('hours')}>
+                  Yes, submit hours
+                </button>
+                <button type="button" className="btn-cancel" onClick={onClose}>
+                  Not yet
+                </button>
+              </div>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <label className="nlh-modal-label">
+                Enter actual flight time (hrs)
+                <input
+                  className="nlh-modal-input"
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={actualHours}
+                  onChange={(e) => setActualHours(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </label>
+
+              <div className="nlh-modal-hint">
+                Your submission will be sent to admin for approval before hobbs time is updated.
+              </div>
+
+              <div className="nlh-modal-actions">
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Submitting...' : 'Submit For Approval'}
+                </button>
+                <button type="button" className="btn-cancel" onClick={() => setStep('confirm')} disabled={saving}>
+                  Back
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
