@@ -29,17 +29,21 @@ function BookingModal({ booking, slot, onClose }) {
   const isEditing = !!booking;
   const isOwner = booking?.userId === currentUser?.id;
   const canEdit = isAdmin() || isOwner || !isEditing;
+  const isAdminUser = isAdmin();
+  const initialUserId = booking?.userId || (isAdminUser ? '' : currentUser?.id || '');
+  const initialCustomerName = booking?.customerName || (isAdminUser ? '' : currentUser?.name || '');
+  const initialCustomerEmail = booking?.customerEmail || (isAdminUser ? '' : currentUser?.email || '');
 
   const [formData, setFormData] = useState({
-    userId: booking?.userId || currentUser?.id || '',
+    userId: initialUserId,
     helicopterId: slot?.helicopterId || booking?.helicopterId || '',
     date: slot?.date || booking?.date || format(new Date(), 'yyyy-MM-dd'),
     endDate: slot?.date || booking?.endDate || booking?.date || format(new Date(), 'yyyy-MM-dd'),
     startTime: slot?.startTime || booking?.startTime || 8,
     endTime: slot?.endTime || booking?.endTime || 9,
-    customerName: booking?.customerName || currentUser?.name || '',
+    customerName: initialCustomerName,
     customerPhone: booking?.customerPhone || '',
-    customerEmail: booking?.customerEmail || currentUser?.email || '',
+    customerEmail: initialCustomerEmail,
     instructorId: booking?.instructorId || '',
     type: booking?.type || 'training',
     notes: booking?.notes || ''
@@ -77,12 +81,16 @@ function BookingModal({ booking, slot, onClose }) {
         [name]: name === 'startTime' || name === 'endTime' ? parseFloat(value) : value
       };
 
-      if (name === 'userId' && isAdmin()) {
+      if (name === 'userId' && isAdminUser) {
         const selectedUser = (users || []).find(u => u.id === value);
         if (selectedUser) {
-          if (!newData.customerName) newData.customerName = selectedUser.name || '';
-          if (!newData.customerEmail) newData.customerEmail = selectedUser.email || '';
-          if (!newData.customerPhone) newData.customerPhone = selectedUser.phone || '';
+          newData.customerName = selectedUser.name || '';
+          newData.customerEmail = selectedUser.email || '';
+          newData.customerPhone = selectedUser.phone || '';
+        } else if (!isEditing) {
+          newData.customerName = '';
+          newData.customerEmail = '';
+          newData.customerPhone = '';
         }
       }
       
@@ -112,10 +120,10 @@ function BookingModal({ booking, slot, onClose }) {
 
     const bookingData = {
       ...formData,
-      userId: isAdmin() ? formData.userId : currentUser.id
+      userId: isAdminUser ? formData.userId : currentUser.id
     };
 
-    if (isAdmin() && !bookingData.userId) {
+    if (isAdminUser && !bookingData.userId) {
       setError('Select a user for this booking');
       return;
     }
@@ -301,7 +309,7 @@ function BookingModal({ booking, slot, onClose }) {
         )}
 
         <form onSubmit={handleSubmit} className="booking-form">
-          {isAdmin() && (
+          {isAdminUser && (
             <div className="form-row">
               <div className="form-group">
                 <label>Book For</label>
