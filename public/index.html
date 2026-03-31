@@ -2,6 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>
+      (function() {
+        var host = window.location.hostname;
+        var canonical = 'schedule-master.vercel.app';
+        if (host !== 'localhost' && host !== '127.0.0.1' && host !== canonical) {
+          window.location.replace('https://' + canonical + window.location.pathname + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
