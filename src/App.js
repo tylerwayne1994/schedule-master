@@ -27,6 +27,7 @@ function AppContent() {
   const [authMode, setAuthMode] = useState('login');
   const [currentPage, setCurrentPage] = useState('schedule');
   const [dismissedBookingId, setDismissedBookingId] = useState(null);
+  const [forceShowBookingId, setForceShowBookingId] = useState(null);
   const [userNotifications, setUserNotifications] = useState([]);
   const [notificationBusy, setNotificationBusy] = useState(false);
   const [messageCenterOpen, setMessageCenterOpen] = useState(false);
@@ -51,6 +52,17 @@ function AppContent() {
       return end <= now;
     };
 
+    // If user explicitly requested to show a specific booking
+    if (forceShowBookingId) {
+      const forcedBooking = (bookings || []).find(b => 
+        b.id === forceShowBookingId && 
+        b.userId === userId &&
+        (b.actualHours == null) &&
+        (b.actualHoursStatus || 'not_submitted') === 'not_submitted'
+      );
+      if (forcedBooking) return forcedBooking;
+    }
+
     return (bookings || [])
       .filter(b => b.userId === userId)
       .filter(b => (b.status || 'confirmed') === 'confirmed')
@@ -63,7 +75,7 @@ function AppContent() {
         const bEnd = new Date(`${(b.endDate || b.date)}T00:00:00`).getTime();
         return aEnd - bEnd;
       })[0];
-  }, [bookings, userId, dismissedBookingId]);
+  }, [bookings, userId, dismissedBookingId, forceShowBookingId]);
 
   React.useEffect(() => {
     const loadUserNotifications = async () => {
@@ -160,6 +172,12 @@ function AppContent() {
     setMessageCenterOpen(true);
   };
 
+  const handleOpenFlightReview = useCallback((bookingId) => {
+    // Clear any dismissed state and force show this booking
+    setDismissedBookingId(null);
+    setForceShowBookingId(bookingId);
+  }, []);
+
   const markUserNotificationRead = async (notificationId) => {
     if (!notificationId || !isSupabaseConfigured()) {
       setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
@@ -195,7 +213,7 @@ function AppContent() {
       case 'schedule':
         return <ScheduleGrid />;
       case 'my-bookings':
-        return <MyBookings />;
+        return <MyBookings onOpenFlightReview={handleOpenFlightReview} />;
       case 'profile':
         return <Profile />;
       case 'admin':
@@ -236,7 +254,10 @@ function AppContent() {
       {pendingCompletion && (
         <CompleteFlightModal
           booking={pendingCompletion}
-          onClose={() => setDismissedBookingId(pendingCompletion.id)}
+          onClose={() => {
+            setDismissedBookingId(pendingCompletion.id);
+            setForceShowBookingId(null);
+          }}
         />
       )}
 
