@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ScheduleProvider } from './contexts/ScheduleContext';
 import { useSchedule } from './contexts/ScheduleContext';
@@ -15,18 +15,24 @@ import Profile from './components/Profile/Profile';
 import { AdminDashboard, HelicopterManagement, UserManagement, InstructorManagement, BookingListManagement, MaintenanceManagement, AdminScheduleManagement } from './components/Admin/AdminPanel';
 import CompleteFlightModal from './components/Notifications/CompleteFlightModal';
 import UserNotificationModal from './components/Notifications/UserNotificationModal';
+import MessageCenter from './components/Notifications/MessageCenter';
+import AdminApprovalModal from './components/Notifications/AdminApprovalModal';
 import './App.css';
 import './styles/responsive.css';
 import './styles/accessibility.css';
 
 function AppContent() {
-  const { currentUser, loading } = useAuth();
-  const { bookings } = useSchedule();
+  const { currentUser, loading, isAdmin } = useAuth();
+  const { bookings, approveFlightHours } = useSchedule();
   const [authMode, setAuthMode] = useState('login');
   const [currentPage, setCurrentPage] = useState('schedule');
   const [dismissedBookingId, setDismissedBookingId] = useState(null);
   const [userNotifications, setUserNotifications] = useState([]);
   const [notificationBusy, setNotificationBusy] = useState(false);
+  const [messageCenterOpen, setMessageCenterOpen] = useState(false);
+  const [showAdminApprovalModal, setShowAdminApprovalModal] = useState(false);
+  const [adminApprovalDismissed, setAdminApprovalDismissed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const userId = currentUser?.id;
 
@@ -83,6 +89,76 @@ function AppContent() {
   }, [currentUser?.id]);
 
   const activeUserNotification = userNotifications[0] || null;
+
+  // Get pending flight hour approvals for admin
+  const pendingApprovals = useMemo(() => {
+    if (!isAdmin()) return [];
+    return (bookings || []).filter(b => 
+      b.actualHoursStatus === 'pending' && 
+      b.actualHours != null
+    );
+  }, [bookings, isAdmin]);
+
+  // Load unread notification count
+  const loadUnreadCount = useCallback(async () => {
+    if (!currentUser?.id || !isSupabaseConfigured()) {
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      let query = supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .is('read_at', null);
+
+      if (isAdmin()) {
+        // Admins see both their own messages and admin broadcast messages
+        query = query.or(`recipient_user_id.is.null,recipient_user_id.eq.${currentUser.id}`);
+      } else {
+        // Regular users only see their own messages
+        query = query.eq('recipient_user_id', currentUser.id);
+      }
+
+      const { count, error } = await query;
+
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load unread count:', err);
+    }
+  }, [currentUser?.id, isAdmin]);
+
+  useEffect(() => {
+    loadUnreadCount();
+  }, [loadUnreadCount]);
+
+  // Show admin approval popup on login if there are pending approvals
+  useEffect(() => {
+    if (isAdmin() && pendingApprovals.length > 0 && !adminApprovalDismissed) {
+      setShowAdminApprovalModal(true);
+    }
+  }, [isAdmin, pendingApprovals.length, adminApprovalDismissed]);
+
+  const handleApproveFlightHours = async (bookingId) => {
+    const result = await approveFlightHours(bookingId);
+    if (result?.success) {
+      // Refresh unread count after approval
+      await loadUnreadCount();
+    }
+    return result;
+  };
+
+  const handleCloseAdminApprovalModal = () => {
+    setShowAdminApprovalModal(false);
+    setAdminApprovalDismissed(true);
+  };
+
+  const handleOpenMessageCenter = () => {
+    setShowAdminApprovalModal(false);
+    setMessageCenterOpen(true);
+  };
 
   const markUserNotificationRead = async (notificationId) => {
     if (!notificationId || !isSupabaseConfigured()) {
@@ -146,7 +222,12 @@ function AppContent() {
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-      <Header currentPage={currentPage} onNavigate={setCurrentPage} />
+      <Header 
+        currentPage={currentPage} 
+        onNavigate={setCurrentPage} 
+        unreadCount={unreadCount}
+        onOpenMessages={() => setMessageCenterOpen(true)}
+      />
       <main id="main-content" className="app-content" role="main" aria-label="Main content">
         {renderPage()}
       </main>
@@ -164,6 +245,26 @@ function AppContent() {
           busy={notificationBusy}
           onMarkRead={markUserNotificationRead}
           onClose={() => markUserNotificationRead(activeUserNotification.id)}
+        />
+      )}
+
+      {/* Message Center Drawer */}
+      <MessageCenter
+        isOpen={messageCenterOpen}
+        onClose={() => {
+          setMessageCenterOpen(false);
+          loadUnreadCount();
+        }}
+        onApproveHours={handleApproveFlightHours}
+      />
+
+      {/* Admin Approval Popup on Login */}
+      {showAdminApprovalModal && pendingApprovals.length > 0 && (
+        <AdminApprovalModal
+          pendingApprovals={pendingApprovals}
+          onClose={handleCloseAdminApprovalModal}
+          onApprove={handleApproveFlightHours}
+          onViewAll={handleOpenMessageCenter}
         />
       )}
     </div>
