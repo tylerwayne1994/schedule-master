@@ -467,3 +467,174 @@
     overflow-x: auto;
   }
 }
+
+/* Admin Notifications Panel */
+.admin-notifications-panel {
+  margin-bottom: 24px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e6ebf2;
+  overflow: hidden;
+}
+
+.admin-notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e6ebf2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-notifications-header:hover {
+  background: #f1f5f9;
+}
+
+.admin-notifications-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-notifications-title h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.collapse-icon {
+  font-size: 0.8rem;
+  color: #64748b;
+  transition: transform 0.2s;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.notification-count-badge {
+  background: #dc2626;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.admin-notifications-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.admin-notifications-body {
+  padding: 16px 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.admin-notification-empty {
+  color: #6b7280;
+  font-size: 0.9rem;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.admin-notification-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.admin-notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-notification-item:last-child {
+  margin-bottom: 0;
+}
+
+.admin-notification-content {
+  flex: 1;
+}
+
+.admin-notification-title {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.admin-notification-message {
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.admin-notification-hobbs {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.admin-notification-actions {
+  margin-top: 8px;
+}
+
+.btn-approve-sm {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-approve-sm:hover {
+  background: #15803d;
+}
+
+.btn-approve-sm:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-delete-notification {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.btn-delete-notification:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-delete-notification:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

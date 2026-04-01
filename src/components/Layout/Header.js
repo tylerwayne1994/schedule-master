@@ -12,7 +12,7 @@ function BellIcon() {
   );
 }
 
-function Header({ currentPage, onNavigate, unreadCount, onOpenMessages }) {
+function Header({ currentPage, onNavigate, unreadCount, onOpenMessages, pendingApprovalCount }) {
   const { currentUser, logout, isAdmin } = useAuth();
 
   return (
@@ -43,10 +43,13 @@ function Header({ currentPage, onNavigate, unreadCount, onOpenMessages }) {
         {isAdmin() && (
           <>
             <button 
-              className={currentPage === 'admin' ? 'active' : ''}
+              className={`${currentPage === 'admin' ? 'active' : ''} ${pendingApprovalCount > 0 ? 'has-notifications' : ''}`}
               onClick={() => onNavigate('admin')}
             >
               Admin
+              {pendingApprovalCount > 0 && (
+                <span className="nav-notification-dot"></span>
+              )}
             </button>
             <button 
               className={currentPage === 'admin-schedule' ? 'active' : ''}

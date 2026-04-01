@@ -60,6 +60,47 @@
   color: white;
 }
 
+.header-nav button.has-notifications {
+  position: relative;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.header-nav button.has-notifications:not(.active) {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.nav-notification-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #dc2626;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3);
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
 .header-user {
   display: flex;
   align-items: center;

@@ -227,6 +227,7 @@ function AppContent() {
         onNavigate={setCurrentPage} 
         unreadCount={unreadCount}
         onOpenMessages={() => setMessageCenterOpen(true)}
+        pendingApprovalCount={pendingApprovals.length}
       />
       <main id="main-content" className="app-content" role="main" aria-label="Main content">
         {renderPage()}

@@ -315,6 +315,8 @@ function AdminDashboard() {
   const [notificationsError, setNotificationsError] = useState('');
   const [notificationActionError, setNotificationActionError] = useState('');
   const [approvingBookingId, setApprovingBookingId] = useState(null);
+  const [notificationsCollapsed, setNotificationsCollapsed] = useState(false);
+  const [deletingNotificationId, setDeletingNotificationId] = useState(null);
 
   const loadNotifications = React.useCallback(async () => {
       if (!isAdmin()) return;
@@ -360,6 +362,22 @@ function AdminDashboard() {
 
     await loadNotifications();
   };
+
+  const handleDeleteNotification = async (notificationId) => {
+    if (!isSupabaseConfigured()) return;
+    
+    setDeletingNotificationId(notificationId);
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    setDeletingNotificationId(null);
+    
+    if (!error) {
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    }
+  };
   const compactWeekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), []);
   const compactWeekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(compactWeekStart, index)),
@@ -389,49 +407,79 @@ function AdminDashboard() {
       <h2>Dashboard Overview</h2>
 
       {isAdmin() && (
-        <div className="admin-mini-calendar-panel" style={{ marginBottom: 20 }}>
-          <div className="admin-mini-calendar-header">
-            <h3>Notifications</h3>
-            <span>Recent</span>
+        <div className="admin-notifications-panel">
+          <div 
+            className="admin-notifications-header"
+            onClick={() => setNotificationsCollapsed(!notificationsCollapsed)}
+          >
+            <div className="admin-notifications-title">
+              <span className={`collapse-icon ${notificationsCollapsed ? 'collapsed' : ''}`}>▼</span>
+              <h3>Notifications</h3>
+              {notifications.length > 0 && (
+                <span className="notification-count-badge">{notifications.length}</span>
+              )}
+            </div>
+            <span className="admin-notifications-hint">{notificationsCollapsed ? 'Click to expand' : 'Click to minimize'}</span>
           </div>
-          <div style={{ padding: 16 }}>
-            {notificationActionError && (
-              <div style={{ color: '#b91c1c', marginBottom: 12 }}>{notificationActionError}</div>
-            )}
-            {notificationsLoading ? (
-              <div style={{ color: '#6b7280' }}>Loading notifications…</div>
-            ) : notificationsError ? (
-              <div style={{ color: '#6b7280' }}>{notificationsError}</div>
-            ) : notifications.length === 0 ? (
-              <div style={{ color: '#6b7280' }}>No notifications yet.</div>
-            ) : (
-              notifications.map(n => {
-                const relatedBooking = bookings.find(b => b.id === n.booking_id);
-                const canApprove = n.type === 'flight_hours_submitted'
-                  && relatedBooking
-                  && relatedBooking.actualHoursStatus === 'pending';
+          {!notificationsCollapsed && (
+            <div className="admin-notifications-body">
+              {notificationActionError && (
+                <div className="admin-notification-error">{notificationActionError}</div>
+              )}
+              {notificationsLoading ? (
+                <div className="admin-notification-empty">Loading notifications...</div>
+              ) : notificationsError ? (
+                <div className="admin-notification-empty">{notificationsError}</div>
+              ) : notifications.length === 0 ? (
+                <div className="admin-notification-empty">No notifications yet.</div>
+              ) : (
+                notifications.map(n => {
+                  const relatedBooking = bookings.find(b => b.id === n.booking_id);
+                  const helicopter = relatedBooking ? helicopters.find(h => h.id === relatedBooking.helicopterId) : null;
+                  const canApprove = n.type === 'flight_hours_submitted'
+                    && relatedBooking
+                    && relatedBooking.actualHoursStatus === 'pending';
+                  const currentHobbs = helicopter?.hobbsTime || 0;
+                  const newHobbs = currentHobbs + (relatedBooking?.actualHours || 0);
 
-                return (
-                  <div key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid #eef2f7' }}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{n.title || n.type}</div>
-                    <div style={{ color: '#6b7280' }}>{n.message}</div>
-                    {canApprove && (
-                      <div style={{ marginTop: 10 }}>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          onClick={() => handleApproveHours(relatedBooking.id)}
-                          disabled={approvingBookingId === relatedBooking.id}
-                        >
-                          {approvingBookingId === relatedBooking.id ? 'Approving...' : `Approve ${relatedBooking.actualHours} hrs`}
-                        </button>
+                  return (
+                    <div key={n.id} className="admin-notification-item">
+                      <div className="admin-notification-content">
+                        <div className="admin-notification-title">{n.title || n.type}</div>
+                        <div className="admin-notification-message">{n.message}</div>
+                        {canApprove && helicopter && (
+                          <div className="admin-notification-hobbs">
+                            <strong>{helicopter.tailNumber}</strong> Hobbs: {currentHobbs.toFixed(1)} hrs → {newHobbs.toFixed(1)} hrs (+{relatedBooking.actualHours} hrs)
+                          </div>
+                        )}
+                        {canApprove && (
+                          <div className="admin-notification-actions">
+                            <button
+                              type="button"
+                              className="btn-approve-sm"
+                              onClick={() => handleApproveHours(relatedBooking.id)}
+                              disabled={approvingBookingId === relatedBooking.id}
+                            >
+                              {approvingBookingId === relatedBooking.id ? 'Approving...' : `Approve ${relatedBooking.actualHours} hrs`}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                      <button
+                        type="button"
+                        className="btn-delete-notification"
+                        onClick={() => handleDeleteNotification(n.id)}
+                        disabled={deletingNotificationId === n.id}
+                        title="Delete notification"
+                      >
+                        {deletingNotificationId === n.id ? '...' : '×'}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       )}
 
