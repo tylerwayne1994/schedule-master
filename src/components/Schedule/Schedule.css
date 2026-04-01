@@ -223,6 +223,31 @@
 .schedule-grid-scroll {
   height: 100%;
   overflow: auto;
+  cursor: grab;
+}
+
+.schedule-grid-scroll.is-dragging {
+  cursor: grabbing;
+}
+
+.schedule-grid-scroll::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.schedule-grid-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.schedule-grid-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
+}
+
+.schedule-grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
 }
 
 .schedule-grid {

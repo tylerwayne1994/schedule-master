@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +11,10 @@ for (let hour = 0; hour < 24; hour++) {
   TIME_SLOTS.push({ hour, minute: 0, decimal: hour });
   TIME_SLOTS.push({ hour, minute: 30, decimal: hour + 0.5 });
 }
+
+// Business hours display (5am to 11pm) - can scroll outside
+const BUSINESS_START_HOUR = 5;
+const BUSINESS_END_HOUR = 23;
 
 const BASE_SLOT_WIDTH = 80; // pixels per half hour (wider columns)
 const DAYS_IN_WEEK = 7;
@@ -29,6 +33,12 @@ function ScheduleGrid() {
   const [dragOffset, setDragOffset] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [zoomLevel, setZoomLevel] = useState(1);
+  
+  // Drag-to-scroll state
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  
   const gridRef = useRef(null);
   const scrollRef = useRef(null);
   const slotWidth = Math.round(BASE_SLOT_WIDTH * zoomLevel);
@@ -45,18 +55,70 @@ function ScheduleGrid() {
     return () => clearInterval(timer);
   }, []);
 
-  // Scroll to current time on load
+  // Scroll to business hours (5am) on load, or current time if within view
   useEffect(() => {
     if (scrollRef.current) {
       const now = new Date();
       const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd'));
+      
       if (dayIndex >= 0) {
-        const hourOffset = now.getHours() * slotWidth * 2;
         const dayOffset = dayIndex * dayWidth;
-        scrollRef.current.scrollLeft = dayOffset + hourOffset - 200;
+        const currentHour = now.getHours();
+        
+        // If current time is within business hours, scroll to show it
+        if (currentHour >= BUSINESS_START_HOUR && currentHour <= BUSINESS_END_HOUR) {
+          const hourOffset = currentHour * slotWidth * 2;
+          scrollRef.current.scrollLeft = dayOffset + hourOffset - 200;
+        } else {
+          // Otherwise scroll to business start (5am)
+          const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
+          scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
+        }
+      } else {
+        // Not viewing current week, scroll to business hours of first day
+        const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
+        scrollRef.current.scrollLeft = businessStartOffset;
       }
     }
   }, [weekDays, slotWidth, dayWidth]);
+
+  // Drag-to-scroll handlers
+  const handleMouseDown = useCallback((e) => {
+    // Don't start drag scroll if clicking on a booking or interactive element
+    if (e.target.closest('.booking-block') || e.target.closest('button') || e.target.closest('select')) {
+      return;
+    }
+    
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+    scrollRef.current.style.cursor = 'grabbing';
+    scrollRef.current.style.userSelect = 'none';
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      scrollRef.current.style.cursor = 'grab';
+      scrollRef.current.style.userSelect = '';
+    }
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = 'grab';
+      scrollRef.current.style.userSelect = '';
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // Scroll speed multiplier
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  }, [isDragging, startX, scrollLeft]);
 
   const { helicopters, bookings, updateBooking } = useSchedule();
   const { currentUser, isAdmin } = useAuth();
@@ -270,12 +332,19 @@ function ScheduleGrid() {
             Maintenance
           </div>
         </div>
-        <div className="drag-hint">Scroll left/right to see full week. Drag bookings to reschedule.</div>
+        <div className="drag-hint">Click and drag to scroll. Shows 5am-11pm by default. Drag bookings to reschedule.</div>
       </div>
 
       {/* Schedule Grid */}
       <div className="schedule-grid-wrapper" ref={gridRef}>
-        <div className="schedule-grid-scroll" ref={scrollRef}>
+        <div 
+          className={`schedule-grid-scroll ${isDragging ? 'is-dragging' : ''}`}
+          ref={scrollRef}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+        >
           <div
             className="schedule-grid"
             style={{
