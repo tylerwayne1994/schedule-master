@@ -861,6 +861,7 @@ function InstructorManagement() {
     name: '',
     email: '',
     phone: '',
+    certifications: '',
     status: 'active'
   });
 
@@ -869,6 +870,7 @@ function InstructorManagement() {
       name: '',
       email: '',
       phone: '',
+      certifications: '',
       status: 'active'
     });
     setEditingId(null);
@@ -880,6 +882,7 @@ function InstructorManagement() {
       name: instructor.name,
       email: instructor.email || '',
       phone: instructor.phone || '',
+      certifications: Array.isArray(instructor.certifications) ? instructor.certifications.join(', ') : '',
       status: instructor.status || 'active'
     });
     setEditingId(instructor.id);
@@ -888,10 +891,20 @@ function InstructorManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const certArray = formData.certifications
+      .split(',')
+      .map(c => c.trim())
+      .filter(c => c.length > 0);
+    
+    const submitData = {
+      ...formData,
+      certifications: certArray
+    };
+    
     if (editingId) {
-      updateInstructor(editingId, formData);
+      updateInstructor(editingId, submitData);
     } else {
-      addInstructor(formData);
+      addInstructor(submitData);
     }
     resetForm();
   };
@@ -940,6 +953,15 @@ function InstructorManagement() {
               />
             </div>
             <div className="form-group">
+              <label>Certifications (comma-separated)</label>
+              <input
+                type="text"
+                value={formData.certifications}
+                onChange={(e) => setFormData({ ...formData, certifications: e.target.value })}
+                placeholder="e.g. CFI, CFII, MEI"
+              />
+            </div>
+            <div className="form-group">
               <label>Status</label>
               <select
                 value={formData.status}
@@ -967,6 +989,7 @@ function InstructorManagement() {
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
+            <th>Certifications</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -977,6 +1000,7 @@ function InstructorManagement() {
               <td className="cfi-name">{i.name}</td>
               <td>{i.email || '-'}</td>
               <td>{i.phone || '-'}</td>
+              <td>{Array.isArray(i.certifications) && i.certifications.length > 0 ? i.certifications.join(', ') : '-'}</td>
               <td>
                 <span className={`status-badge ${i.status}`}>
                   {i.status}

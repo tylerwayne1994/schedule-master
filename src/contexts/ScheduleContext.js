@@ -158,6 +158,8 @@ export function ScheduleProvider({ children }) {
         const mapped = data.map(i => ({
           id: i.id,
           name: i.name,
+          email: i.email || null,
+          phone: i.phone || null,
           certifications: Array.isArray(i.certifications) ? i.certifications : [],
           status: i.status || 'active',
           createdAt: i.created_at
@@ -216,6 +218,7 @@ export function ScheduleProvider({ children }) {
     };
     
     initData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save helicopters to localStorage as backup (Supabase is primary)
@@ -335,6 +338,8 @@ export function ScheduleProvider({ children }) {
         .from('instructors')
         .insert({
           name: instructor.name,
+          email: instructor.email || null,
+          phone: instructor.phone || null,
           certifications: Array.isArray(instructor.certifications) ? instructor.certifications : [],
           status: instructor.status || 'active'
         })
@@ -345,6 +350,8 @@ export function ScheduleProvider({ children }) {
         const newInstructor = {
           id: data.id,
           name: data.name,
+          email: data.email || null,
+          phone: data.phone || null,
           certifications: Array.isArray(data.certifications) ? data.certifications : [],
           status: data.status || 'active',
           createdAt: data.created_at
@@ -370,6 +377,8 @@ export function ScheduleProvider({ children }) {
     if (isSupabaseConfigured()) {
       const dbUpdates = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.email !== undefined) dbUpdates.email = updates.email;
+      if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
       if (updates.certifications !== undefined) dbUpdates.certifications = updates.certifications;
       if (updates.status !== undefined) dbUpdates.status = updates.status;
 
