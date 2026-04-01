@@ -603,11 +603,32 @@
 
 .modal-error {
   margin: 16px 24px 0;
-  padding: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 2px solid #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  animation: shake 0.4s ease-in-out;
+}
+
+.modal-error::before {
+  content: '⚠ ';
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.summary-row.error-highlight {
   background: #fee2e2;
-  color: #dc2626;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  border: 1px solid #dc2626;
 }
 
 .booking-form {

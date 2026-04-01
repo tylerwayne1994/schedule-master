@@ -108,6 +108,16 @@ function BookingModal({ booking, slot, onClose }) {
     setError('');
     setFieldErrors({});
 
+    // Check for negative duration first (common user error)
+    if (duration <= 0) {
+      setError('Invalid booking times: End time must be after start time. Please check your dates and times.');
+      // Scroll modal to top to show error
+      if (modalRef.current) {
+        modalRef.current.scrollTop = 0;
+      }
+      return;
+    }
+
     // Validate form using validation utility
     const validation = validateBookingForm(formData);
     if (!validation.isValid) {
@@ -115,6 +125,10 @@ function BookingModal({ booking, slot, onClose }) {
       // Show first error as main error message
       const firstError = Object.values(validation.errors)[0];
       setError(firstError);
+      // Scroll modal to top to show error
+      if (modalRef.current) {
+        modalRef.current.scrollTop = 0;
+      }
       return;
     }
 
@@ -209,6 +223,7 @@ function BookingModal({ booking, slot, onClose }) {
   };
   
   const duration = calculateDuration();
+  const isInvalidDuration = duration <= 0;
 
   // Prepare booking data for calendar
   const getCalendarBookingData = () => ({
@@ -505,9 +520,11 @@ function BookingModal({ booking, slot, onClose }) {
 
           {selectedHelicopter && (
             <div className="booking-summary">
-              <div className="summary-row">
+              <div className={`summary-row ${isInvalidDuration ? 'error-highlight' : ''}`}>
                 <span>Duration:</span>
-                <span>{duration} hour{duration > 1 ? 's' : ''}</span>
+                <span style={isInvalidDuration ? { color: '#dc2626', fontWeight: 'bold' } : {}}>
+                  {isInvalidDuration ? `${duration} hour (INVALID - check times!)` : `${duration} hour${duration > 1 ? 's' : ''}`}
+                </span>
               </div>
               {selectedInstructor && (
                 <div className="summary-row">
