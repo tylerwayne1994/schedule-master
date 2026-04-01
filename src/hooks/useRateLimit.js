@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import RateLimiter from '../utils/rateLimiter';
 
 /**
@@ -61,25 +61,22 @@ export function useRateLimit(maxRequests = 10, windowMs = 60000) {
 
 /**
  * Hook for debounced values
+ * @param {any} value - The value to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @returns {any} - The debounced value
  */
 export function useDebounce(value, delay = 300) {
   const [debouncedValue, setDebouncedValue] = useState(value);
   
-  const timeoutRef = useRef(null);
-  
-  useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
+  // Use useEffect to properly debounce the value
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
     
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timeoutId);
     };
   }, [value, delay]);
   
