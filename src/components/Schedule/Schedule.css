@@ -626,7 +626,7 @@
 }
 
 .btn-secondary {
-  background: #f59e0b;
+  background: #64748b;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -636,7 +636,7 @@
 }
 
 .btn-secondary:hover {
-  background: #d97706;
+  background: #475569;
 }
 
 .btn-danger {

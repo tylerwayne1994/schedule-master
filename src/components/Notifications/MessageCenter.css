@@ -122,12 +122,12 @@
 }
 
 .message-item-urgent {
-  background: #fef3c7;
-  border-left: 4px solid #f59e0b;
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
 }
 
 .message-item-urgent:hover {
-  background: #fef9c3;
+  background: #dbeafe;
 }
 
 .message-item-read {
