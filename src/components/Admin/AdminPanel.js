@@ -683,6 +683,21 @@ function MaintenanceManagement() {
       return;
     }
 
+    if (!formData.helicopterId) {
+      setError('Please select a helicopter.');
+      return;
+    }
+
+    if (!formData.date || !formData.endDate) {
+      setError('Please select start and end dates.');
+      return;
+    }
+
+    if (formData.date === formData.endDate && Number(formData.endTime) <= Number(formData.startTime)) {
+      setError('End time must be after start time for same-day maintenance.');
+      return;
+    }
+
     const maintenanceBooking = {
       helicopterId: formData.helicopterId,
       date: formData.date,
@@ -698,16 +713,21 @@ function MaintenanceManagement() {
       userId: currentUser?.id
     };
 
-    const result = editingId
-      ? await updateBooking(editingId, maintenanceBooking)
-      : await createBooking(maintenanceBooking);
+    try {
+      const result = editingId
+        ? await updateBooking(editingId, maintenanceBooking)
+        : await createBooking(maintenanceBooking);
 
-    if (!result?.success) {
-      setError(result?.error || 'Unable to save maintenance block');
-      return;
+      if (!result?.success) {
+        setError(result?.error || 'Unable to save maintenance block. Please try again.');
+        return;
+      }
+
+      resetForm();
+    } catch (err) {
+      console.error('Maintenance booking error:', err);
+      setError('An unexpected error occurred. Please try again.');
     }
-
-    resetForm();
   };
 
   const handleEdit = (booking) => {

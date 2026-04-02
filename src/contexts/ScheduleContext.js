@@ -450,7 +450,10 @@ export function ScheduleProvider({ children }) {
 
   // Booking CRUD
   const createBooking = async (booking) => {
+    console.log('createBooking called with:', booking);
+    
     if (hasBookingConflict(booking)) {
+      console.log('Booking conflict detected');
       return { success: false, error: 'Time slot already booked' };
     }
 
@@ -464,6 +467,7 @@ export function ScheduleProvider({ children }) {
 
     if (isSupabaseConfigured()) {
       const payload = mapBookingToDb(newBooking);
+      console.log('Supabase payload:', payload);
       const expectedUserId = payload.user_id;
       const { data, error } = await supabase.rpc('create_booking_record', {
         p_user_id: payload.user_id,
@@ -480,6 +484,8 @@ export function ScheduleProvider({ children }) {
         p_notes: payload.notes,
         p_status: payload.status
       });
+
+      console.log('RPC result:', { data, error });
 
       if (data && !error) {
         const hydrated = await fetchBookingById(data.id);
@@ -518,6 +524,8 @@ export function ScheduleProvider({ children }) {
         .insert(directInsertPayload)
         .select()
         .single();
+
+      console.log('Direct insert result:', { data: directData, error: directError });
 
       if (directData && !directError) {
         const hydrated = await fetchBookingById(directData.id);
