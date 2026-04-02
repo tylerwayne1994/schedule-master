@@ -26,7 +26,6 @@ function AppContent() {
   const { bookings, approveFlightHours } = useSchedule();
   const [authMode, setAuthMode] = useState('login');
   const [currentPage, setCurrentPage] = useState('schedule');
-  const [dismissedBookingId, setDismissedBookingId] = useState(null);
   const [forceShowBookingId, setForceShowBookingId] = useState(null);
   const [userNotifications, setUserNotifications] = useState([]);
   const [notificationBusy, setNotificationBusy] = useState(false);
@@ -34,6 +33,35 @@ function AppContent() {
   const [showAdminApprovalModal, setShowAdminApprovalModal] = useState(false);
   const [adminApprovalDismissed, setAdminApprovalDismissed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Persist dismissed booking IDs in localStorage so they survive page refresh
+  const [dismissedBookingIds, setDismissedBookingIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('nlh_dismissed_flight_prompts');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save dismissed IDs to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('nlh_dismissed_flight_prompts', JSON.stringify(dismissedBookingIds));
+    } catch {
+      // localStorage might be full or unavailable
+    }
+  }, [dismissedBookingIds]);
+
+  const dismissBookingPrompt = useCallback((bookingId) => {
+    setDismissedBookingIds(prev => {
+      if (prev.includes(bookingId)) return prev;
+      // Keep only last 50 to prevent localStorage from growing too large
+      const updated = [...prev, bookingId].slice(-50);
+      return updated;
+    });
+    setForceShowBookingId(null);
+  }, []);
 
   const userId = currentUser?.id;
 
@@ -68,14 +96,14 @@ function AppContent() {
       .filter(b => (b.status || 'confirmed') === 'confirmed')
       .filter(b => (b.actualHours == null))
       .filter(b => (b.actualHoursStatus || 'not_submitted') === 'not_submitted')
-      .filter(b => b.id !== dismissedBookingId)
+      .filter(b => !dismissedBookingIds.includes(b.id))
       .filter(isPastEndPlusOneMinute)
       .sort((a, b) => {
         const aEnd = new Date(`${(a.endDate || a.date)}T00:00:00`).getTime();
         const bEnd = new Date(`${(b.endDate || b.date)}T00:00:00`).getTime();
         return aEnd - bEnd;
       })[0];
-  }, [bookings, userId, dismissedBookingId, forceShowBookingId]);
+  }, [bookings, userId, dismissedBookingIds, forceShowBookingId]);
 
   React.useEffect(() => {
     const loadUserNotifications = async () => {
@@ -91,6 +119,10 @@ function AppContent() {
         .is('read_at', null)
         .order('created_at', { ascending: true })
         .limit(10);
+
+      if (error) {
+        console.error('Failed to load notifications:', error);
+      }
 
       if (!error && data) {
         setUserNotifications(data);
@@ -173,14 +205,16 @@ function AppContent() {
   };
 
   const handleOpenFlightReview = useCallback((bookingId) => {
-    // Clear any dismissed state and force show this booking
-    setDismissedBookingId(null);
+    // Remove from dismissed list and force show this booking
+    setDismissedBookingIds(prev => prev.filter(id => id !== bookingId));
     setForceShowBookingId(bookingId);
   }, []);
 
   const markUserNotificationRead = async (notificationId) => {
+    // Optimistically remove from local state first
+    setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
+    
     if (!notificationId || !isSupabaseConfigured()) {
-      setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
       return;
     }
 
@@ -191,8 +225,10 @@ function AppContent() {
       .eq('id', notificationId);
     setNotificationBusy(false);
 
-    if (!error) {
-      setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
+    if (error) {
+      console.error('Failed to mark notification as read:', error);
+      // Don't re-add to state - user already dismissed it visually
+      // The notification will stay in DB but won't bother user this session
     }
   };
 
@@ -254,10 +290,7 @@ function AppContent() {
       {pendingCompletion && (
         <CompleteFlightModal
           booking={pendingCompletion}
-          onClose={() => {
-            setDismissedBookingId(pendingCompletion.id);
-            setForceShowBookingId(null);
-          }}
+          onClose={() => dismissBookingPrompt(pendingCompletion.id)}
         />
       )}
 
