@@ -120,6 +120,31 @@ function ScheduleGrid() {
     scrollRef.current.scrollLeft = scrollLeft - walk;
   }, [isDragging, startX, scrollLeft]);
 
+  // Touch event handlers for mobile
+  const handleTouchStart = useCallback((e) => {
+    // Don't start drag scroll if touching a booking or interactive element
+    if (e.target.closest('.booking-block') || e.target.closest('button') || e.target.closest('select')) {
+      return;
+    }
+    
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setStartX(touch.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    const x = touch.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  }, [isDragging, startX, scrollLeft]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
   const { helicopters, bookings, updateBooking } = useSchedule();
   const { currentUser, isAdmin } = useAuth();
 
@@ -344,6 +369,9 @@ function ScheduleGrid() {
           onMouseLeave={handleMouseLeave}
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <div
             className="schedule-grid"

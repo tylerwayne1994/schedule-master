@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import logo from '../../assets/logo.png';
 import './Layout.css';
@@ -12,8 +12,58 @@ function BellIcon() {
   );
 }
 
+function HamburgerIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+      <path fillRule="evenodd" d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+      <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 function Header({ currentPage, onNavigate, unreadCount, onOpenMessages, pendingApprovalCount }) {
   const { currentUser, logout, isAdmin } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close menu when page changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [currentPage]);
+
+  // Close menu on resize if desktop width
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  const handleNavClick = (page) => {
+    onNavigate(page);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="app-header">
@@ -21,22 +71,37 @@ function Header({ currentPage, onNavigate, unreadCount, onOpenMessages, pendingA
         <img src={logo} alt="Next Level Helicopters" className="header-logo" />
       </div>
 
-      <nav className="header-nav">
+      {/* Mobile hamburger button */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={mobileMenuOpen}
+      >
+        {mobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
+      </button>
+
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
+      <nav className={`header-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <button 
           className={currentPage === 'schedule' ? 'active' : ''}
-          onClick={() => onNavigate('schedule')}
+          onClick={() => handleNavClick('schedule')}
         >
           Schedule
         </button>
         <button 
           className={currentPage === 'my-bookings' ? 'active' : ''}
-          onClick={() => onNavigate('my-bookings')}
+          onClick={() => handleNavClick('my-bookings')}
         >
           My Bookings
         </button>
         <button 
           className={currentPage === 'profile' ? 'active' : ''}
-          onClick={() => onNavigate('profile')}
+          onClick={() => handleNavClick('profile')}
         >
           Profile
         </button>
@@ -44,7 +109,7 @@ function Header({ currentPage, onNavigate, unreadCount, onOpenMessages, pendingA
           <>
             <button 
               className={`${currentPage === 'admin' ? 'active' : ''} ${pendingApprovalCount > 0 ? 'has-notifications' : ''}`}
-              onClick={() => onNavigate('admin')}
+              onClick={() => handleNavClick('admin')}
             >
               Admin
               {pendingApprovalCount > 0 && (
@@ -53,42 +118,53 @@ function Header({ currentPage, onNavigate, unreadCount, onOpenMessages, pendingA
             </button>
             <button 
               className={currentPage === 'admin-schedule' ? 'active' : ''}
-              onClick={() => onNavigate('admin-schedule')}
+              onClick={() => handleNavClick('admin-schedule')}
             >
               Admin Schedule
             </button>
             <button 
               className={currentPage === 'helicopters' ? 'active' : ''}
-              onClick={() => onNavigate('helicopters')}
+              onClick={() => handleNavClick('helicopters')}
             >
               Helicopters
             </button>
             <button 
               className={currentPage === 'bookings' ? 'active' : ''}
-              onClick={() => onNavigate('bookings')}
+              onClick={() => handleNavClick('bookings')}
             >
               Bookings
             </button>
             <button 
               className={currentPage === 'maintenance' ? 'active' : ''}
-              onClick={() => onNavigate('maintenance')}
+              onClick={() => handleNavClick('maintenance')}
             >
               Maintenance
             </button>
             <button 
               className={currentPage === 'cfis' ? 'active' : ''}
-              onClick={() => onNavigate('cfis')}
+              onClick={() => handleNavClick('cfis')}
             >
               CFIs
             </button>
             <button 
               className={currentPage === 'users' ? 'active' : ''}
-              onClick={() => onNavigate('users')}
+              onClick={() => handleNavClick('users')}
             >
               Users
             </button>
           </>
         )}
+        
+        {/* Mobile-only user section inside nav */}
+        <div className="mobile-user-section">
+          <span className="user-name">
+            {currentUser?.name}
+            {isAdmin() && <span className="admin-badge">Admin</span>}
+          </span>
+          <button className="logout-btn" onClick={logout}>
+            Logout
+          </button>
+        </div>
       </nav>
 
       <div className="header-user">

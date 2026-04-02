@@ -562,6 +562,9 @@
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  /* iOS Safari fixes */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .modal-content {
@@ -570,8 +573,13 @@
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  /* iOS Safari fixes */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  position: relative;
 }
 
 .modal-header {

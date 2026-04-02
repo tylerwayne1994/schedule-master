@@ -1,5 +1,26 @@
 /* Mobile Responsive Styles */
 
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Smooth scrolling on iOS */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix input zoom on iOS */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Safe area insets for notched devices */
+.app-content {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Base mobile adjustments */
 @media (max-width: 768px) {
   /* Header adjustments */
@@ -42,6 +63,7 @@
     flex-wrap: wrap;
     justify-content: center;
     width: 100%;
+    gap: 8px;
   }
 
   .date-nav {
@@ -52,6 +74,9 @@
   .current-date {
     font-size: 0.95rem;
     padding: 0 8px;
+    width: 100%;
+    text-align: center;
+    order: -1;
   }
 
   .filters {
@@ -76,6 +101,7 @@
 
   .drag-hint {
     text-align: center;
+    font-size: 0.75rem;
   }
 
   /* Zoom controls */
@@ -96,6 +122,11 @@
   /* Grid wrapper - enable horizontal scroll */
   .schedule-grid-wrapper {
     border-radius: 12px;
+  }
+
+  .schedule-grid-scroll {
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .resource-header,
@@ -123,6 +154,19 @@
 
   .auth-title {
     font-size: 1.3rem;
+  }
+
+  .auth-container {
+    padding: 16px;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .auth-box {
+    max-width: 100%;
+  }
+
+  .auth-form {
+    padding: 24px 20px;
   }
 
   /* Profile page */
@@ -164,16 +208,25 @@
 
   /* Modal adjustments */
   .modal-overlay {
-    padding: 12px;
+    padding: 0;
+    align-items: flex-end;
   }
 
   .modal-content {
-    max-height: 95vh;
-    border-radius: 12px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   .modal-header {
     padding: 16px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    border-bottom: 1px solid #eee;
   }
 
   .modal-header h2 {
@@ -182,6 +235,7 @@
 
   .booking-form {
     padding: 16px;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
   .form-row {
@@ -196,11 +250,18 @@
   .form-actions {
     flex-wrap: wrap;
     gap: 8px;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 16px;
+    margin: 0 -16px -16px;
+    border-top: 1px solid #eee;
   }
 
   .form-actions button {
     flex: 1 1 auto;
     min-width: 100px;
+    min-height: 48px;
   }
 
   /* My Bookings page */
@@ -210,6 +271,10 @@
 
   .booking-card {
     padding: 16px;
+  }
+
+  .booking-cards {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -224,13 +289,20 @@
   }
 
   .new-booking-btn {
-    padding: 8px 14px;
-    font-size: 0.8rem;
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+
+  .date-nav {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .date-nav button {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-height: 44px;
   }
 
   .resource-header,
@@ -244,7 +316,10 @@
   }
 
   .modal-close {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .auth-card {
@@ -254,8 +329,20 @@
   .booking-form input,
   .booking-form select,
   .booking-form textarea {
-    padding: 8px 10px;
-    font-size: 0.9rem;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .booking-summary {
+    padding: 12px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-cancel {
+    padding: 14px 20px;
+    font-size: 1rem;
   }
 }
 
@@ -280,10 +367,13 @@
 @media (max-width: 812px) and (orientation: landscape) {
   .modal-overlay {
     padding: 8px;
+    align-items: center;
   }
 
   .modal-content {
     max-height: 98vh;
+    border-radius: 12px;
+    max-width: 90%;
   }
 
   .booking-form {
@@ -293,12 +383,19 @@
 
 /* Touch device improvements */
 @media (hover: none) and (pointer: coarse) {
+  /* Ensure minimum touch target sizes (44px recommended by Apple/Google) */
   .nav-button,
   .new-booking-btn,
   .date-nav button,
   .zoom-controls button,
-  .form-actions button {
+  .form-actions button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-cancel,
+  .btn-calendar {
     min-height: 44px;
+    min-width: 44px;
   }
 
   .time-slot {
@@ -306,7 +403,61 @@
   }
 
   .booking-block {
-    min-height: 36px;
+    min-height: 40px;
+  }
+
+  /* Larger tap areas for interactive elements */
+  .header-nav button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  /* Remove hover effects that don't work on touch */
+  .time-slot:hover {
+    background: transparent;
+  }
+
+  .booking-block:hover {
+    transform: none;
+  }
+
+  /* Better touch scrolling */
+  .schedule-grid-scroll {
+    scroll-behavior: auto;
+  }
+
+  /* Disable text selection during touch interactions */
+  .schedule-grid {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Active states for touch feedback */
+  button:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+
+  .booking-block:active {
+    transform: scale(0.98);
+  }
+
+  /* Improve tap targets in forms */
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 48px;
+  }
+
+  .checkbox-label {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
   }
 }
 

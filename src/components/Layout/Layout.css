@@ -140,6 +140,39 @@
   background: #e2e8f0;
 }
 
+/* Mobile menu toggle button */
+.mobile-menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #475569;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mobile-menu-toggle:hover {
+  background: #e2e8f0;
+}
+
+/* Mobile menu overlay */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+}
+
+/* Mobile user section (hidden on desktop) */
+.mobile-user-section {
+  display: none;
+}
+
 /* Main Layout */
 .app-layout {
   display: flex;
@@ -154,7 +187,7 @@
   flex-direction: column;
 }
 
-/* Responsive */
+/* Responsive - Tablet */
 @media (max-width: 900px) {
   .app-header {
     flex-wrap: wrap;
@@ -176,5 +209,109 @@
 
   .header-user {
     order: 2;
+  }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+  .app-header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 0;
+    flex-wrap: nowrap;
+    position: relative;
+  }
+
+  .header-brand {
+    flex: 1;
+  }
+
+  .header-logo {
+    height: 32px;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: 2;
+    margin-left: auto;
+  }
+
+  .mobile-menu-overlay {
+    display: block;
+  }
+
+  .header-nav {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    flex-direction: column;
+    padding: 16px;
+    gap: 8px;
+    z-index: 100;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: auto;
+  }
+
+  .header-nav.mobile-open {
+    display: flex;
+  }
+
+  .header-nav button {
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-radius: 8px;
+    justify-content: flex-start;
+  }
+
+  .header-nav button.active {
+    background: #1e40af;
+    color: white;
+  }
+
+  .header-user {
+    order: 1;
+    gap: 8px;
+  }
+
+  .header-user .user-name,
+  .header-user .logout-btn {
+    display: none;
+  }
+
+  .notification-bell {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+  }
+
+  /* Mobile user section at bottom of nav */
+  .mobile-user-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .mobile-user-section .user-name {
+    font-size: 1rem;
+    padding: 8px 16px;
+  }
+
+  .mobile-user-section .logout-btn {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1rem;
+    text-align: center;
   }
 }
