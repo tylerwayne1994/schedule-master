@@ -1,16 +1,10 @@
-// Email Service using EmailJS for automatic notifications
-import emailjs from '@emailjs/browser';
-
-// Initialize EmailJS with public key
-const EMAILJS_SERVICE_ID = process.env.REACT_APP_EMAILJS_SERVICE_ID;
-const EMAILJS_TEMPLATE_ID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
-const EMAILJS_PUBLIC_KEY = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+// Email Service using Twilio SendGrid via Vercel serverless function
 
 /**
- * Check if EmailJS is configured
+ * Check if email service is available (always true since backend handles config)
  */
 export function isEmailConfigured() {
-  return !!(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
+  return true; // Config is server-side now
 }
 
 /**
@@ -44,11 +38,6 @@ function formatDate(dateStr) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function sendCFINotification(booking, instructor, helicopter) {
-  if (!isEmailConfigured()) {
-    console.warn('EmailJS not configured - skipping CFI notification');
-    return { success: false, error: 'Email service not configured' };
-  }
-
   if (!instructor?.email) {
     console.warn('No instructor email provided');
     return { success: false, error: 'No instructor email' };
@@ -63,7 +52,7 @@ export async function sendCFINotification(booking, instructor, helicopter) {
     ? `${formattedDate} through ${formattedEndDate}`
     : formattedDate;
 
-  const templateParams = {
+  const payload = {
     to_email: instructor.email,
     to_name: instructor.name || 'Instructor',
     flight_date: dateDisplay,
@@ -74,23 +63,30 @@ export async function sendCFINotification(booking, instructor, helicopter) {
     customer_name: booking.customerName || 'Not specified',
     customer_email: booking.customerEmail || '',
     customer_phone: booking.customerPhone || '',
-    notes: booking.notes || 'None',
-    from_name: 'Next Level Helicopters'
+    notes: booking.notes || 'None'
   };
 
   try {
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams,
-      EMAILJS_PUBLIC_KEY
-    );
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
-    console.log('CFI notification sent:', response);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('Email API error:', result);
+      return { success: false, error: result.error || 'Failed to send email' };
+    }
+
+    console.log('CFI notification sent:', instructor.email);
     return { success: true };
   } catch (error) {
     console.error('Failed to send CFI notification:', error);
-    return { success: false, error: error.text || error.message };
+    return { success: false, error: error.message };
   }
 }
 
@@ -102,11 +98,6 @@ export async function sendCFINotification(booking, instructor, helicopter) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function sendBookingConfirmation(booking, helicopter, instructor) {
-  if (!isEmailConfigured()) {
-    console.warn('EmailJS not configured - skipping booking confirmation');
-    return { success: false, error: 'Email service not configured' };
-  }
-
   if (!booking?.customerEmail) {
     console.warn('No customer email provided');
     return { success: false, error: 'No customer email' };
@@ -121,7 +112,7 @@ export async function sendBookingConfirmation(booking, helicopter, instructor) {
     ? `${formattedDate} through ${formattedEndDate}`
     : formattedDate;
 
-  const templateParams = {
+  const payload = {
     to_email: booking.customerEmail,
     to_name: booking.customerName || 'Customer',
     flight_date: dateDisplay,
@@ -129,23 +120,32 @@ export async function sendBookingConfirmation(booking, helicopter, instructor) {
     helicopter_tail: helicopter?.tailNumber || 'N/A',
     helicopter_model: helicopter?.model || 'N/A',
     flight_type: booking.flightType || booking.type || 'Flight',
-    instructor_name: instructor?.name || 'Not assigned',
-    notes: booking.notes || 'None',
-    from_name: 'Next Level Helicopters'
+    customer_name: booking.customerName || '',
+    customer_email: '',
+    customer_phone: '',
+    notes: booking.notes || 'None'
   };
 
   try {
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams,
-      EMAILJS_PUBLIC_KEY
-    );
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
-    console.log('Booking confirmation sent:', response);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('Email API error:', result);
+      return { success: false, error: result.error || 'Failed to send email' };
+    }
+
+    console.log('Booking confirmation sent:', booking.customerEmail);
     return { success: true };
   } catch (error) {
     console.error('Failed to send booking confirmation:', error);
-    return { success: false, error: error.text || error.message };
+    return { success: false, error: error.message };
   }
 }

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { generateGoogleCalendarUrl, createGoogleCalendarEvent, generateBookingMailtoUrl } from '../../lib/notifications';
-import { sendCFINotification, isEmailConfigured } from '../../lib/emailService';
+import { sendCFINotification } from '../../lib/emailService';
 import { validateBookingForm } from '../../utils/validation';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -165,7 +165,7 @@ function BookingModal({ booking, slot, onClose }) {
     const assignedInstructor = instructors.find(i => i.id === (savedBooking.instructorId || formData.instructorId));
     const assignedHelicopter = helicopters.find(h => h.id === (savedBooking.helicopterId || formData.helicopterId));
     
-    if (assignedInstructor?.email && isEmailConfigured()) {
+    if (assignedInstructor?.email) {
       // Send notification asynchronously (don't block UI)
       sendCFINotification(savedBooking, assignedInstructor, assignedHelicopter)
         .then(result => {
