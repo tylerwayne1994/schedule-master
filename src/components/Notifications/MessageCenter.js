@@ -16,6 +16,7 @@ export default function MessageCenter({ isOpen, onClose, onApproveHours }) {
   const loadMessages = useCallback(async () => {
     if (!currentUser?.id || !isSupabaseConfigured()) {
       setMessages([]);
+      setLoading(false);
       return;
     }
 
@@ -39,20 +40,27 @@ export default function MessageCenter({ isOpen, onClose, onApproveHours }) {
         query = query.eq('recipient_user_id', currentUser.id);
       }
 
-      const { data, error: fetchError } = await query;
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timed out')), 10000)
+      );
+      
+      const { data, error: fetchError } = await Promise.race([query, timeoutPromise]);
 
       if (fetchError) {
+        console.error('Message Center fetch error:', fetchError);
         setError(fetchError.message || 'Unable to load messages');
         setMessages([]);
       } else {
         setMessages(data || []);
       }
     } catch (err) {
-      setError('Unable to load messages');
+      console.error('Message Center error:', err);
+      setError(err.message || 'Unable to load messages');
       setMessages([]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [currentUser?.id, isAdmin]);
 
   useEffect(() => {

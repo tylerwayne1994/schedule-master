@@ -319,30 +319,50 @@ function AdminDashboard() {
   const [deletingNotificationId, setDeletingNotificationId] = useState(null);
 
   const loadNotifications = React.useCallback(async () => {
-      if (!isAdmin()) return;
+      if (!isAdmin()) {
+        setNotifications([]);
+        setNotificationsLoading(false);
+        return;
+      }
       if (!isSupabaseConfigured()) {
         setNotifications([]);
         setNotificationsError('Supabase is not configured. Notifications require Supabase.');
+        setNotificationsLoading(false);
         return;
       }
 
       setNotificationsLoading(true);
       setNotificationsError('');
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .is('recipient_user_id', null)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      
+      try {
+        const query = supabase
+          .from('notifications')
+          .select('*')
+          .is('recipient_user_id', null)
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-      if (data && !error) {
-        setNotifications(data);
-      } else if (error) {
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timed out')), 10000)
+        );
+        
+        const { data, error } = await Promise.race([query, timeoutPromise]);
+
+        if (data && !error) {
+          setNotifications(data);
+        } else if (error) {
+          console.error('Admin notifications error:', error);
+          setNotifications([]);
+          setNotificationsError(error.message || 'Unable to load notifications');
+        }
+      } catch (err) {
+        console.error('Admin notifications error:', err);
         setNotifications([]);
-        setNotificationsError(error.message || 'Unable to load notifications');
+        setNotificationsError(err.message || 'Unable to load notifications');
+      } finally {
+        setNotificationsLoading(false);
       }
-
-      setNotificationsLoading(false);
     }, [isAdmin]);
 
   React.useEffect(() => {
