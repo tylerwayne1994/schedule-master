@@ -204,11 +204,17 @@ function ScheduleGrid() {
     bookings.forEach(booking => {
       if (booking.status === 'cancelled') return;
       
-      const startDate = new Date(booking.date);
-      const endDate = new Date(booking.endDate || booking.date);
+      // Parse dates as local dates to avoid timezone issues
+      // booking.date is like "2026-04-03"
+      const [startYear, startMonth, startDay] = booking.date.split('-').map(Number);
+      const startDate = new Date(startYear, startMonth - 1, startDay);
+      
+      const endDateStr = booking.endDate || booking.date;
+      const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+      const endDate = new Date(endYear, endMonth - 1, endDay);
       
       // Add booking to each day it spans
-      let current = startDate;
+      let current = new Date(startDate);
       while (current <= endDate) {
         const dateStr = format(current, 'yyyy-MM-dd');
         if (!map.has(dateStr)) {
@@ -649,6 +655,18 @@ function ScheduleGrid() {
                       {filteredDayBookings.slice(0, 3).map((booking, bIndex) => {
                         const isOwner = booking.userId === currentUser?.id;
                         const isMaintenance = booking.type === 'maintenance';
+                        // Format times
+                        const formatTime = (timeStr) => {
+                          if (!timeStr) return '';
+                          const [hours, minutes] = timeStr.split(':');
+                          const h = parseInt(hours);
+                          const ampm = h >= 12 ? 'p' : 'a';
+                          const h12 = h % 12 || 12;
+                          return `${h12}${minutes !== '00' ? ':' + minutes : ''}${ampm}`;
+                        };
+                        const timeDisplay = booking.startTime && booking.endTime 
+                          ? `${formatTime(booking.startTime)}-${formatTime(booking.endTime)}` 
+                          : '';
                         return (
                           <div 
                             key={bIndex}
@@ -656,10 +674,10 @@ function ScheduleGrid() {
                             style={{ 
                               background: isMaintenance ? '#dc2626' : (isOwner ? '#16a34a' : '#2563eb')
                             }}
-                            title={`${booking.customerName || 'Booking'} - ${helicopters.find(h => h.id === booking.helicopterId)?.tailNumber || ''}`}
+                            title={`${booking.customerName || 'Booking'} - ${helicopters.find(h => h.id === booking.helicopterId)?.tailNumber || ''} - ${booking.startTime}-${booking.endTime}`}
                           >
                             <span className="calendar-booking-text">
-                              {booking.customerName?.split(' ')[0] || 'Booked'}
+                              {booking.customerName?.split(' ')[0] || 'Booked'} {timeDisplay}
                             </span>
                           </div>
                         );
