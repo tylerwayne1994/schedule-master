@@ -661,18 +661,26 @@ function ScheduleGrid() {
                       {filteredDayBookings.slice(0, 3).map((booking, bIndex) => {
                         const isOwner = booking.userId === currentUser?.id;
                         const isMaintenance = booking.type === 'maintenance';
-                        // Format times - ensure timeStr is a string
-                        const formatTime = (timeStr) => {
-                          if (!timeStr || typeof timeStr !== 'string') return '';
-                          const parts = timeStr.split(':');
-                          if (parts.length < 2) return timeStr;
-                          const h = parseInt(parts[0]);
-                          const minutes = parts[1];
+                        // Format times - handle both number (8.5) and string ("08:30") formats
+                        const formatTime = (time) => {
+                          if (time === null || time === undefined) return '';
+                          let h, m;
+                          if (typeof time === 'number') {
+                            h = Math.floor(time);
+                            m = time % 1 === 0.5 ? 30 : 0;
+                          } else if (typeof time === 'string' && time.includes(':')) {
+                            const parts = time.split(':');
+                            h = parseInt(parts[0]);
+                            m = parseInt(parts[1]) || 0;
+                          } else {
+                            return String(time);
+                          }
                           const ampm = h >= 12 ? 'p' : 'a';
                           const h12 = h % 12 || 12;
-                          return `${h12}${minutes !== '00' ? ':' + minutes : ''}${ampm}`;
+                          return `${h12}${m !== 0 ? ':' + String(m).padStart(2, '0') : ''}${ampm}`;
                         };
-                        const timeDisplay = booking.startTime && booking.endTime 
+                        const timeDisplay = (booking.startTime !== null && booking.startTime !== undefined && 
+                                             booking.endTime !== null && booking.endTime !== undefined)
                           ? `${formatTime(booking.startTime)}-${formatTime(booking.endTime)}` 
                           : '';
                         return (
