@@ -573,9 +573,10 @@ function AdminScheduleManagement() {
 }
 
 function BookingListManagement() {
-  const { bookings, helicopters, instructors } = useSchedule();
+  const { bookings, helicopters, instructors, deleteBooking } = useSchedule();
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' });
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [error, setError] = useState('');
 
   const sortedBookings = useMemo(() => {
     const rows = bookings
@@ -607,12 +608,29 @@ function BookingListManagement() {
     }));
   };
 
+  const handleDelete = async (bookingId, customerName) => {
+    if (window.confirm(`Delete booking for ${customerName}?`)) {
+      setError('');
+      try {
+        const result = await deleteBooking(bookingId);
+        if (!result?.success) {
+          setError(result?.error || 'Failed to delete booking');
+        }
+      } catch (err) {
+        console.error('Delete error:', err);
+        setError('Error deleting booking: ' + err.message);
+      }
+    }
+  };
+
   return (
     <div className="admin-section">
       <div className="section-header">
         <h2>Booking List</h2>
         <span className="user-count">{sortedBookings.length} bookings</span>
       </div>
+
+      {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-table-wrap">
         <table className="admin-table">
@@ -624,7 +642,7 @@ function BookingListManagement() {
               <th className="sortable" onClick={() => handleSort('helicopterLabel')}>Helicopter</th>
               <th>Time</th>
               <th className="sortable" onClick={() => handleSort('statusLabel')}>Status</th>
-              <th>Quick Edit</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -643,6 +661,9 @@ function BookingListManagement() {
                 <td className="actions">
                   <button className="btn-edit" onClick={() => setSelectedBooking(booking)}>
                     Edit
+                  </button>
+                  <button className="btn-delete" onClick={() => handleDelete(booking.id, booking.customerLabel)}>
+                    Delete
                   </button>
                 </td>
               </tr>

@@ -197,12 +197,17 @@ function BookingModal({ booking, slot, onClose }) {
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
-      const result = await deleteBooking(booking.id);
-      if (!result?.success) {
-        setError(result?.error || 'Unable to delete booking');
-        return;
+      try {
+        const result = await deleteBooking(booking.id);
+        if (!result?.success) {
+          setError(result?.error || 'Unable to delete booking');
+          return;
+        }
+        onClose();
+      } catch (err) {
+        console.error('Delete error:', err);
+        setError('Failed to delete booking: ' + (err.message || 'Unknown error'));
       }
-      onClose();
     }
   };
 
