@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { format, addDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
+import { format, addDays, startOfWeek, addWeeks, subWeeks, startOfMonth, addMonths, subMonths, isSameMonth, isSameDay } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingModal from './BookingModal';
@@ -25,6 +25,8 @@ const ZOOM_STEP = 0.25;
 
 function ScheduleGrid() {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState('timeline'); // 'timeline' or 'calendar'
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -162,6 +164,59 @@ function ScheduleGrid() {
   const handleZoomIn = () => setZoomLevel(prev => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
   const handleZoomReset = () => setZoomLevel(1);
+  
+  // Month navigation
+  const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const handleThisMonth = () => setCurrentMonth(new Date());
+  
+  // Handle clicking a date on the calendar - switch to timeline view for that week
+  const handleCalendarDateClick = (date) => {
+    setWeekStart(startOfWeek(date, { weekStartsOn: 0 }));
+    setViewMode('timeline');
+  };
+  
+  // Generate calendar days for the month
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    
+    const days = [];
+    let day = calendarStart;
+    
+    // Generate 6 weeks of days (42 days)
+    for (let i = 0; i < 42; i++) {
+      days.push(day);
+      day = addDays(day, 1);
+    }
+    
+    return days;
+  }, [currentMonth]);
+  
+  // Group bookings by date for calendar view
+  const bookingsByDate = useMemo(() => {
+    const map = new Map();
+    
+    bookings.forEach(booking => {
+      if (booking.status === 'cancelled') return;
+      
+      const startDate = new Date(booking.date);
+      const endDate = new Date(booking.endDate || booking.date);
+      
+      // Add booking to each day it spans
+      let current = startDate;
+      while (current <= endDate) {
+        const dateStr = format(current, 'yyyy-MM-dd');
+        if (!map.has(dateStr)) {
+          map.set(dateStr, []);
+        }
+        map.get(dateStr).push(booking);
+        current = addDays(current, 1);
+      }
+    });
+    
+    return map;
+  }, [bookings]);
 
   const handleSlotClick = (helicopter, day, slot) => {
     if (helicopter.status === 'maintenance' && !isAdmin()) {
@@ -307,30 +362,62 @@ function ScheduleGrid() {
           }}>
             + New Booking
           </button>
-          <div className="zoom-controls">
-            <span className="zoom-label">Zoom</span>
-            <div className="zoom-segmented" role="group" aria-label="Schedule zoom controls">
-              <button type="button" className="zoom-button" onClick={handleZoomOut} disabled={zoomLevel <= MIN_ZOOM}>
-                -
-              </button>
-              <button type="button" className="zoom-readout" onClick={handleZoomReset}>
-                {Math.round(zoomLevel * 100)}%
-              </button>
-              <button type="button" className="zoom-button" onClick={handleZoomIn} disabled={zoomLevel >= MAX_ZOOM}>
-                +
-              </button>
-            </div>
+          
+          {/* View Toggle */}
+          <div className="view-toggle">
+            <button 
+              type="button" 
+              className={`view-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+              onClick={() => setViewMode('timeline')}
+            >
+              Timeline
+            </button>
+            <button 
+              type="button" 
+              className={`view-toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+              onClick={() => setViewMode('calendar')}
+            >
+              Calendar
+            </button>
           </div>
+          
+          {viewMode === 'timeline' && (
+            <div className="zoom-controls">
+              <span className="zoom-label">Zoom</span>
+              <div className="zoom-segmented" role="group" aria-label="Schedule zoom controls">
+                <button type="button" className="zoom-button" onClick={handleZoomOut} disabled={zoomLevel <= MIN_ZOOM}>
+                  -
+                </button>
+                <button type="button" className="zoom-readout" onClick={handleZoomReset}>
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+                <button type="button" className="zoom-button" onClick={handleZoomIn} disabled={zoomLevel >= MAX_ZOOM}>
+                  +
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="date-nav">
-          <button onClick={handlePrevWeek}>&lt;&lt;</button>
-          <button onClick={handleThisWeek}>This Week</button>
-          <span className="current-date">
-            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
-          </span>
-          <button onClick={handleNextWeek}>&gt;&gt;</button>
-        </div>
+        {viewMode === 'timeline' ? (
+          <div className="date-nav">
+            <button onClick={handlePrevWeek}>&lt;&lt;</button>
+            <button onClick={handleThisWeek}>This Week</button>
+            <span className="current-date">
+              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            </span>
+            <button onClick={handleNextWeek}>&gt;&gt;</button>
+          </div>
+        ) : (
+          <div className="date-nav">
+            <button onClick={handlePrevMonth}>&lt;&lt;</button>
+            <button onClick={handleThisMonth}>This Month</button>
+            <span className="current-date">
+              {format(currentMonth, 'MMMM yyyy')}
+            </span>
+            <button onClick={handleNextMonth}>&gt;&gt;</button>
+          </div>
+        )}
 
         <div className="filters">
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -341,45 +428,47 @@ function ScheduleGrid() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="schedule-toolbar">
-        <div className="legend">
-          <div className="legend-item">
-            <span className="legend-color" style={{ background: '#16a34a' }}></span>
-            My Bookings
+      {viewMode === 'timeline' ? (
+        <>
+          {/* Legend */}
+          <div className="schedule-toolbar">
+            <div className="legend">
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#16a34a' }}></span>
+                My Bookings
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#2563eb' }}></span>
+                Other Bookings
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#dc2626' }}></span>
+                Maintenance
+              </div>
+            </div>
+            <div className="drag-hint">Click and drag to scroll. Shows 5am-11pm by default. Drag bookings to reschedule.</div>
           </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ background: '#2563eb' }}></span>
-            Other Bookings
-          </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ background: '#dc2626' }}></span>
-            Maintenance
-          </div>
-        </div>
-        <div className="drag-hint">Click and drag to scroll. Shows 5am-11pm by default. Drag bookings to reschedule.</div>
-      </div>
 
-      {/* Schedule Grid */}
-      <div className="schedule-grid-wrapper" ref={gridRef}>
-        <div 
-          className={`schedule-grid-scroll ${isDragging ? 'is-dragging' : ''}`}
-          ref={scrollRef}
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div
-            className="schedule-grid"
-            style={{
-              width: dayWidth * DAYS_IN_WEEK + 160,
-              '--slot-width': `${slotWidth}px`
-            }}
-          >
+          {/* Schedule Grid */}
+          <div className="schedule-grid-wrapper" ref={gridRef}>
+            <div 
+              className={`schedule-grid-scroll ${isDragging ? 'is-dragging' : ''}`}
+              ref={scrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div
+                className="schedule-grid"
+                style={{
+                  width: dayWidth * DAYS_IN_WEEK + 160,
+                  '--slot-width': `${slotWidth}px`
+                }}
+              >
             {/* Day headers row */}
             <div className="grid-header">
               <div className="resource-header">Helicopters</div>
@@ -496,6 +585,91 @@ function ScheduleGrid() {
           </div>
         </div>
       </div>
+        </>
+      ) : (
+        /* Monthly Calendar View */
+        <div className="monthly-calendar">
+          <div className="calendar-legend">
+            <div className="legend">
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#16a34a' }}></span>
+                My Bookings
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#2563eb' }}></span>
+                Other Bookings
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ background: '#dc2626' }}></span>
+                Maintenance
+              </div>
+            </div>
+            <div className="calendar-hint">Click any date to view that week in timeline</div>
+          </div>
+          
+          <div className="calendar-grid">
+            <div className="calendar-header">
+              <div className="calendar-day-header">Sun</div>
+              <div className="calendar-day-header">Mon</div>
+              <div className="calendar-day-header">Tue</div>
+              <div className="calendar-day-header">Wed</div>
+              <div className="calendar-day-header">Thu</div>
+              <div className="calendar-day-header">Fri</div>
+              <div className="calendar-day-header">Sat</div>
+            </div>
+            <div className="calendar-body">
+              {calendarDays.map((day, index) => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const dayBookings = bookingsByDate.get(dateStr) || [];
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const isToday = isSameDay(day, new Date());
+                
+                // Filter bookings by helicopter filter
+                const filteredDayBookings = dayBookings.filter(b => {
+                  if (filter === 'all') return true;
+                  const heli = helicopters.find(h => h.id === b.helicopterId);
+                  if (filter === 'available') return heli?.status === 'available';
+                  if (filter === 'maintenance') return heli?.status === 'maintenance' || b.type === 'maintenance';
+                  return true;
+                });
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`calendar-day ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
+                    onClick={() => handleCalendarDateClick(day)}
+                  >
+                    <div className="calendar-day-number">{format(day, 'd')}</div>
+                    <div className="calendar-day-bookings">
+                      {filteredDayBookings.slice(0, 3).map((booking, bIndex) => {
+                        const isOwner = booking.userId === currentUser?.id;
+                        const isMaintenance = booking.type === 'maintenance';
+                        return (
+                          <div 
+                            key={bIndex}
+                            className="calendar-booking-dot"
+                            style={{ 
+                              background: isMaintenance ? '#dc2626' : (isOwner ? '#16a34a' : '#2563eb')
+                            }}
+                            title={`${booking.customerName || 'Booking'} - ${helicopters.find(h => h.id === booking.helicopterId)?.tailNumber || ''}`}
+                          >
+                            <span className="calendar-booking-text">
+                              {booking.customerName?.split(' ')[0] || 'Booked'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {filteredDayBookings.length > 3 && (
+                        <div className="calendar-more">+{filteredDayBookings.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Booking Modal */}
       {showBookingModal && (
