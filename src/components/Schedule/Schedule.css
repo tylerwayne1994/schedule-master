@@ -903,6 +903,7 @@
   font-size: 0.875rem;
   color: #374151;
   margin-bottom: 4px;
+  pointer-events: none;
 }
 
 .calendar-day-bookings {
@@ -911,6 +912,7 @@
   gap: 2px;
   flex: 1;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .calendar-booking-dot {
@@ -924,12 +926,14 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 .calendar-booking-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .calendar-more {
@@ -937,6 +941,7 @@
   color: #6b7280;
   font-weight: 500;
   margin-top: 2px;
+  pointer-events: none;
 }
 
 .calendar-legend {

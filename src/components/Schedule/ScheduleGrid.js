@@ -172,12 +172,19 @@ function ScheduleGrid() {
   
   // Handle clicking a date on the calendar - switch to timeline view for that week
   const handleCalendarDateClick = (e) => {
-    const dateStr = e.currentTarget.getAttribute('data-date');
+    // Find the calendar-day element even if clicking on a child
+    const dayElement = e.target.closest('.calendar-day');
+    if (!dayElement) return;
+    
+    const dateStr = dayElement.getAttribute('data-date');
     if (!dateStr) return;
-    // Parse as local date (add time to avoid timezone issues)
+    
+    // Parse as local date
     const [year, month, day] = dateStr.split('-').map(Number);
     const clickedDate = new Date(year, month - 1, day);
     const newWeekStart = startOfWeek(clickedDate, { weekStartsOn: 0 });
+    
+    // Update both states
     setWeekStart(newWeekStart);
     setViewMode('timeline');
   };

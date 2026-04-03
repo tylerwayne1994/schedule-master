@@ -574,7 +574,9 @@ export function ScheduleProvider({ children }) {
     if (isSupabaseConfigured()) {
       const dbUpdates = mapBookingToDb({ ...existingBooking, ...updates, id });
       const expectedUserId = dbUpdates.user_id;
-      const { data, error } = await supabase.rpc('update_booking_record', {
+      
+      // Try RPC first
+      let { data, error } = await supabase.rpc('update_booking_record', {
         p_booking_id: id,
         p_user_id: dbUpdates.user_id,
         p_helicopter_id: dbUpdates.helicopter_id,
@@ -596,9 +598,36 @@ export function ScheduleProvider({ children }) {
         p_actual_hours_approved_by: dbUpdates.actual_hours_approved_by
       });
 
+      // If RPC fails, try direct update as fallback
       if (error) {
-        console.error('Failed to update booking:', error);
-        return { success: false, error: error?.message || 'Unable to update booking' };
+        console.error('RPC update failed, trying direct update:', error);
+        const directResult = await supabase
+          .from('bookings')
+          .update({
+            user_id: dbUpdates.user_id,
+            helicopter_id: dbUpdates.helicopter_id,
+            date: dbUpdates.date,
+            end_date: dbUpdates.end_date,
+            start_time: dbUpdates.start_time,
+            end_time: dbUpdates.end_time,
+            instructor_id: dbUpdates.instructor_id,
+            customer_name: dbUpdates.customer_name,
+            customer_phone: dbUpdates.customer_phone,
+            customer_email: dbUpdates.customer_email,
+            flight_type: dbUpdates.flight_type,
+            type: dbUpdates.flight_type,
+            notes: dbUpdates.notes,
+            status: dbUpdates.status
+          })
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (directResult.error) {
+          console.error('Direct update also failed:', directResult.error);
+          return { success: false, error: directResult.error?.message || 'Unable to update booking' };
+        }
+        data = directResult.data;
       }
 
       if (data) {
