@@ -174,18 +174,25 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       if (isSupabaseConfigured()) {
-        await supabase.auth.signOut({ scope: 'global' });
+        await supabase.auth.signOut({ scope: 'local' });
       }
     } catch (error) {
       console.error('Logout failed:', error);
-    } finally {
-      setCurrentUser(null);
-      setSession(null);
-      setUsers([]);
-      localStorage.removeItem('nlh_session');
-      localStorage.removeItem('currentUser');
-      window.location.replace(window.location.origin);
     }
+    // Clear all state and storage regardless of signOut result
+    setCurrentUser(null);
+    setSession(null);
+    setUsers([]);
+    localStorage.removeItem('nlh_session');
+    localStorage.removeItem('currentUser');
+    sessionStorage.clear();
+    // Clear any supabase keys
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    window.location.replace(window.location.origin);
   };
 
   const register = async (email, password, name) => {

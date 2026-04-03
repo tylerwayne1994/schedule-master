@@ -7,12 +7,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Missing Supabase credentials. Using demo mode with localStorage.');
 }
 
-// Use sessionStorage instead of localStorage to prevent session sharing across tabs
 export const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-        storageKey: 'nlh-auth-token',
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
