@@ -67,14 +67,19 @@ function ScheduleGrid() {
     const targetDate = scrollToDateRef.current;
     
     if (targetDate) {
-      // Scroll to the clicked date
-      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === targetDate);
-      
-      if (dayIndex >= 0) {
-        const dayOffset = dayIndex * dayWidth;
-        const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
-        scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
-      }
+      // Use requestAnimationFrame to ensure DOM is fully laid out after view switch
+      requestAnimationFrame(() => {
+        if (!scrollRef.current) return;
+        
+        // Scroll to the clicked date
+        const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === targetDate);
+        
+        if (dayIndex >= 0) {
+          const dayOffset = dayIndex * dayWidth;
+          const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
+          scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
+        }
+      });
       
       // Clear the ref so future week changes don't use this date
       scrollToDateRef.current = null;
