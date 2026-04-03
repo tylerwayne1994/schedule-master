@@ -171,9 +171,14 @@ function ScheduleGrid() {
   const handleThisMonth = () => setCurrentMonth(new Date());
   
   // Handle clicking a date on the calendar - switch to timeline view for that week
-  const handleCalendarDateClick = (timestamp) => {
-    const clickedDate = new Date(timestamp);
-    setWeekStart(startOfWeek(clickedDate, { weekStartsOn: 0 }));
+  const handleCalendarDateClick = (e) => {
+    const dateStr = e.currentTarget.getAttribute('data-date');
+    if (!dateStr) return;
+    // Parse as local date (add time to avoid timezone issues)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const clickedDate = new Date(year, month - 1, day);
+    const newWeekStart = startOfWeek(clickedDate, { weekStartsOn: 0 });
+    setWeekStart(newWeekStart);
     setViewMode('timeline');
   };
   
@@ -636,7 +641,8 @@ function ScheduleGrid() {
                   <div 
                     key={index} 
                     className={`calendar-day ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
-                    onClick={() => handleCalendarDateClick(day.getTime())}
+                    data-date={dateStr}
+                    onClick={handleCalendarDateClick}
                   >
                     <div className="calendar-day-number">{format(day, 'd')}</div>
                     <div className="calendar-day-bookings">
