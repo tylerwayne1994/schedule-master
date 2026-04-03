@@ -165,17 +165,17 @@ function BookingModal({ booking, slot, onClose }) {
     const assignedInstructor = instructors.find(i => i.id === (savedBooking.instructorId || formData.instructorId));
     const assignedHelicopter = helicopters.find(h => h.id === (savedBooking.helicopterId || formData.helicopterId));
     
-    if (assignedInstructor?.email) {
-      // Send notification asynchronously (don't block UI)
+    if (assignedInstructor?.phone) {
+      // Send SMS notification asynchronously (don't block UI)
       sendCFINotification(savedBooking, assignedInstructor, assignedHelicopter)
         .then(result => {
           if (result.success) {
-            console.log('CFI notification sent to:', assignedInstructor.email);
+            console.log('CFI SMS sent to:', assignedInstructor.phone);
           } else {
-            console.warn('CFI notification failed:', result.error);
+            console.warn('CFI SMS failed:', result.error);
           }
         })
-        .catch(err => console.error('CFI notification error:', err));
+        .catch(err => console.error('CFI SMS error:', err));
     }
 
     if (sendEmailDraft) {
