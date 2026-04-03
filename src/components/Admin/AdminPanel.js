@@ -672,7 +672,8 @@ function MaintenanceManagement() {
     endDate: format(new Date(), 'yyyy-MM-dd'),
     startTime: 0,
     endTime: 24,
-    notes: ''
+    notes: '',
+    fullDay: true
   });
 
   const maintenanceBookings = useMemo(() => (
@@ -690,7 +691,8 @@ function MaintenanceManagement() {
       endDate: format(new Date(), 'yyyy-MM-dd'),
       startTime: 0,
       endTime: 24,
-      notes: ''
+      notes: '',
+      fullDay: true
     });
   };
 
@@ -818,7 +820,8 @@ function MaintenanceManagement() {
             <label>Start Time</label>
             <select
               value={formData.startTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, startTime: Number(e.target.value) }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, startTime: Number(e.target.value), fullDay: false }))}
+              disabled={formData.fullDay}
             >
               <option value={0}>12:00 AM</option>
               <option value={6}>6:00 AM</option>
@@ -831,13 +834,29 @@ function MaintenanceManagement() {
             <label>End Time</label>
             <select
               value={formData.endTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, endTime: Number(e.target.value) }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, endTime: Number(e.target.value), fullDay: false }))}
+              disabled={formData.fullDay}
             >
               <option value={6}>6:00 AM</option>
               <option value={12}>12:00 PM</option>
               <option value={18}>6:00 PM</option>
               <option value={24}>11:59 PM</option>
             </select>
+          </div>
+          <div className="form-group form-group-checkbox">
+            <label>
+              <input
+                type="checkbox"
+                checked={formData.fullDay}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  fullDay: e.target.checked,
+                  startTime: e.target.checked ? 0 : prev.startTime,
+                  endTime: e.target.checked ? 24 : prev.endTime
+                }))}
+              />
+              24 Hours (Full Day)
+            </label>
           </div>
           <div className="form-group form-group-wide">
             <label>Notes</label>
