@@ -221,6 +221,24 @@ export function ScheduleProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-refresh bookings every 30 seconds to keep data in sync
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    
+    const refreshInterval = setInterval(async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (data && !error) {
+        setBookings(data.map(mapBookingFromDb));
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   // Save helicopters to localStorage as backup (Supabase is primary)
   useEffect(() => {
     if (!isSupabaseConfigured() && !loading && helicopters.length > 0) {
