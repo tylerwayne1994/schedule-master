@@ -934,11 +934,19 @@ function MaintenanceManagement() {
 }
 
 function InstructorManagement() {
-  const { instructors, bookings, addInstructor, updateInstructor, deleteInstructor } = useSchedule();
+  const { instructors, bookings, cfiBlocks, addInstructor, updateInstructor, deleteInstructor, addCfiBlock, deleteCfiBlock } = useSchedule();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalDate, setSelectedCalDate] = useState(null);
+  const [showBlockForm, setShowBlockForm] = useState(false);
+  const [blockFormData, setBlockFormData] = useState({
+    instructorId: '',
+    allDay: true,
+    startTime: 8,
+    endTime: 17,
+    reason: ''
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -1021,14 +1029,31 @@ function InstructorManagement() {
           startTime: booking.startTime,
           endTime: booking.endTime,
           customerName: booking.customerName,
-          type: booking.type
+          type: booking.type,
+          source: 'booking'
         });
         current = addDays(current, 1);
       }
     });
+
+    // Add CFI blocks to the map
+    (cfiBlocks || []).forEach(block => {
+      const dateStr = block.date;
+      if (!map.has(dateStr)) map.set(dateStr, []);
+      map.get(dateStr).push({
+        instructorId: block.instructorId,
+        startTime: block.allDay ? 0 : block.startTime,
+        endTime: block.allDay ? 24 : block.endTime,
+        customerName: block.reason || 'Blocked',
+        type: 'blocked',
+        source: 'block',
+        blockId: block.id,
+        allDay: block.allDay
+      });
+    });
     
     return map;
-  }, [bookings]);
+  }, [bookings, cfiBlocks]);
 
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -1196,7 +1221,92 @@ function InstructorManagement() {
         {/* Selected date detail panel */}
         {selectedCalDate && selectedDateDetails && (
           <div className="cfi-day-detail">
-            <h4>{format(selectedCalDate, 'EEEE, MMMM d, yyyy')}</h4>
+            <div className="cfi-day-detail-header">
+              <h4>{format(selectedCalDate, 'EEEE, MMMM d, yyyy')}</h4>
+              <button 
+                className="btn-block-cfi" 
+                onClick={() => {
+                  setShowBlockForm(true);
+                  setBlockFormData({ instructorId: '', allDay: true, startTime: 8, endTime: 17, reason: '' });
+                }}
+              >
+                + Block Out CFI
+              </button>
+            </div>
+
+            {showBlockForm && (
+              <div className="cfi-block-form">
+                <div className="cfi-block-form-row">
+                  <select 
+                    value={blockFormData.instructorId}
+                    onChange={(e) => setBlockFormData({ ...blockFormData, instructorId: e.target.value })}
+                  >
+                    <option value="">Select CFI</option>
+                    {activeCFIs.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <label className="cfi-block-allday">
+                    <input 
+                      type="checkbox" 
+                      checked={blockFormData.allDay}
+                      onChange={(e) => setBlockFormData({ ...blockFormData, allDay: e.target.checked })}
+                    />
+                    All Day
+                  </label>
+                </div>
+                {!blockFormData.allDay && (
+                  <div className="cfi-block-form-row">
+                    <select 
+                      value={blockFormData.startTime}
+                      onChange={(e) => setBlockFormData({ ...blockFormData, startTime: parseFloat(e.target.value) })}
+                    >
+                      {Array.from({ length: 48 }, (_, i) => {
+                        const val = i * 0.5;
+                        return <option key={val} value={val}>{formatAdminTime(val)}</option>;
+                      })}
+                    </select>
+                    <span>to</span>
+                    <select 
+                      value={blockFormData.endTime}
+                      onChange={(e) => setBlockFormData({ ...blockFormData, endTime: parseFloat(e.target.value) })}
+                    >
+                      {Array.from({ length: 48 }, (_, i) => {
+                        const val = (i + 1) * 0.5;
+                        return <option key={val} value={val}>{formatAdminTime(val)}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
+                <div className="cfi-block-form-row">
+                  <input 
+                    type="text"
+                    placeholder="Reason (e.g. Day off, Training, Vacation)"
+                    value={blockFormData.reason}
+                    onChange={(e) => setBlockFormData({ ...blockFormData, reason: e.target.value })}
+                  />
+                </div>
+                <div className="cfi-block-form-actions">
+                  <button 
+                    className="btn-save"
+                    disabled={!blockFormData.instructorId}
+                    onClick={() => {
+                      addCfiBlock({
+                        ...blockFormData,
+                        date: format(selectedCalDate, 'yyyy-MM-dd')
+                      });
+                      setShowBlockForm(false);
+                    }}
+                  >
+                    Block Out
+                  </button>
+                  <button className="btn-cancel" onClick={() => setShowBlockForm(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="cfi-detail-list">
               {selectedDateDetails.map(cfi => (
                 <div key={cfi.id} className={`cfi-detail-row ${cfi.isBooked ? 'booked' : 'available'}`}>
@@ -1212,9 +1322,20 @@ function InstructorManagement() {
                       <span className="cfi-free-text">Available all day</span>
                     ) : (
                       cfi.bookings.map((b, i) => (
-                        <div key={i} className="cfi-booking-slot">
-                          {formatTimeShort(b.startTime)} - {formatTimeShort(b.endTime)}
-                          <span className="cfi-booking-info">{b.customerName || b.type}</span>
+                        <div key={i} className={`cfi-booking-slot ${b.source === 'block' ? 'is-block' : ''}`}>
+                          {b.allDay ? 'All Day' : `${formatTimeShort(b.startTime)} - ${formatTimeShort(b.endTime)}`}
+                          <span className="cfi-booking-info">
+                            {b.source === 'block' ? (b.customerName || 'Blocked') : (b.customerName || b.type)}
+                          </span>
+                          {b.source === 'block' && b.blockId && (
+                            <button 
+                              className="cfi-block-remove"
+                              title="Remove block"
+                              onClick={() => deleteCfiBlock(b.blockId)}
+                            >
+                              x
+                            </button>
+                          )}
                         </div>
                       ))
                     )}

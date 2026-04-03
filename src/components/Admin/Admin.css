@@ -842,6 +842,129 @@
   font-size: 0.75rem;
 }
 
+/* CFI Day Detail Header */
+.cfi-day-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cfi-day-detail-header h4 {
+  margin: 0;
+}
+
+.btn-block-cfi {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-block-cfi:hover {
+  background: #b91c1c;
+}
+
+/* CFI Block Form */
+.cfi-block-form {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cfi-block-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cfi-block-form-row select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.cfi-block-form-row input[type="text"] {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.cfi-block-allday {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cfi-block-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cfi-block-form-actions .btn-save {
+  background: #dc2626;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
+.cfi-block-form-actions .btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cfi-block-form-actions .btn-cancel {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
+/* Block slot styling */
+.cfi-booking-slot.is-block {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.cfi-booking-slot.is-block .cfi-booking-info {
+  color: #dc2626;
+}
+
+.cfi-block-remove {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 0;
+  line-height: 1;
+}
+
+.cfi-block-remove:hover {
+  background: #fecaca;
+}
+
 .admin-notification-empty {
   color: #6b7280;
   font-size: 0.9rem;

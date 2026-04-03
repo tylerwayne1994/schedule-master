@@ -49,6 +49,7 @@ export function ScheduleProvider({ children }) {
   const [helicopters, setHelicopters] = useState([]);
   const [instructors, setInstructors] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [cfiBlocks, setCfiBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const mapBookingFromDb = (b) => ({
@@ -205,6 +206,35 @@ export function ScheduleProvider({ children }) {
     }
   };
 
+  const loadCfiBlocks = async () => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('cfi_blocks')
+        .select('*')
+        .order('date');
+
+      if (data && !error) {
+        setCfiBlocks(data.map(b => ({
+          id: b.id,
+          instructorId: b.instructor_id,
+          date: b.date,
+          startTime: typeof b.start_time === 'number' ? b.start_time : parseFloat(b.start_time),
+          endTime: typeof b.end_time === 'number' ? b.end_time : parseFloat(b.end_time),
+          allDay: b.all_day || false,
+          reason: b.reason || ''
+        })));
+        return;
+      }
+      // Table might not exist yet - fall through to localStorage
+      console.log('cfi_blocks table not available, using localStorage');
+    }
+
+    const stored = localStorage.getItem('nlh_cfi_blocks');
+    if (stored) {
+      setCfiBlocks(JSON.parse(stored));
+    }
+  };
+
   // Initialize data
   useEffect(() => {
     const initData = async () => {
@@ -213,6 +243,8 @@ export function ScheduleProvider({ children }) {
       await loadInstructors();
 
       await loadBookings();
+
+      await loadCfiBlocks();
 
       setLoading(false);
     };
@@ -431,6 +463,64 @@ export function ScheduleProvider({ children }) {
     }
 
     setInstructors(prev => prev.filter(i => i.id !== id));
+    return { success: true };
+  };
+
+  // CFI Block-out CRUD
+  const addCfiBlock = async (blockData) => {
+    const newBlock = {
+      id: `block-${Date.now()}`,
+      instructorId: blockData.instructorId,
+      date: blockData.date,
+      startTime: blockData.allDay ? 0 : parseFloat(blockData.startTime),
+      endTime: blockData.allDay ? 24 : parseFloat(blockData.endTime),
+      allDay: blockData.allDay || false,
+      reason: blockData.reason || ''
+    };
+
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('cfi_blocks')
+        .insert({
+          instructor_id: newBlock.instructorId,
+          date: newBlock.date,
+          start_time: newBlock.startTime,
+          end_time: newBlock.endTime,
+          all_day: newBlock.allDay,
+          reason: newBlock.reason
+        })
+        .select()
+        .single();
+
+      if (data && !error) {
+        newBlock.id = data.id;
+      } else if (error) {
+        console.log('cfi_blocks insert failed (table may not exist), storing locally:', error.message);
+      }
+    }
+
+    setCfiBlocks(prev => {
+      const updated = [...prev, newBlock];
+      if (!isSupabaseConfigured()) {
+        localStorage.setItem('nlh_cfi_blocks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return { success: true, block: newBlock };
+  };
+
+  const deleteCfiBlock = async (id) => {
+    if (isSupabaseConfigured()) {
+      await supabase.from('cfi_blocks').delete().eq('id', id);
+    }
+
+    setCfiBlocks(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      if (!isSupabaseConfigured()) {
+        localStorage.setItem('nlh_cfi_blocks', JSON.stringify(updated));
+      }
+      return updated;
+    });
     return { success: true };
   };
 
@@ -869,12 +959,15 @@ export function ScheduleProvider({ children }) {
     helicopters,
     instructors,
     bookings,
+    cfiBlocks,
     addHelicopter,
     updateHelicopter,
     deleteHelicopter,
     addInstructor,
     updateInstructor,
     deleteInstructor,
+    addCfiBlock,
+    deleteCfiBlock,
     createBooking,
     updateBooking,
     cancelBooking,

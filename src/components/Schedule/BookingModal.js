@@ -24,7 +24,7 @@ function formatTimeLabel(decimal) {
 }
 
 function BookingModal({ booking, slot, onClose }) {
-  const { helicopters, instructors, bookings, createBooking, updateBooking, deleteBooking, cancelBooking } = useSchedule();
+  const { helicopters, instructors, bookings, cfiBlocks, createBooking, updateBooking, deleteBooking, cancelBooking } = useSchedule();
   const { currentUser, isAdmin, users, hasGoogleCalendarAccess, getGoogleAccessToken } = useAuth();
   
   const isEditing = !!booking;
@@ -231,7 +231,7 @@ function BookingModal({ booking, slot, onClose }) {
   // Filter instructors to show availability based on selected date/time
   const availableInstructors = useMemo(() => {
     const activeCFIs = instructors.filter(i => i.status === 'active');
-    if (!formData.date) return activeCFIs;
+    if (!formData.date) return activeCFIs.map(c => ({ ...c, isBusy: false }));
     
     const bookingDate = formData.date;
     const bookingEndDate = formData.endDate || formData.date;
@@ -242,27 +242,33 @@ function BookingModal({ booking, slot, onClose }) {
     const conflicting = bookings.filter(b => {
       if (b.status === 'cancelled') return false;
       if (!b.instructorId) return false;
-      if (isEditing && b.id === booking.id) return false; // Don't conflict with self
+      if (isEditing && b.id === booking.id) return false;
       
       const bStart = b.date;
       const bEnd = b.endDate || b.date;
       
-      // Check date overlap
       if (bEnd < bookingDate || bStart > bookingEndDate) return false;
-      
-      // Check time overlap
       if (b.endTime <= bookingStart || b.startTime >= bookingEnd) return false;
       
       return true;
     });
     
     const busyCFIIds = new Set(conflicting.map(b => b.instructorId));
+
+    // Also check CFI blocks
+    (cfiBlocks || []).forEach(block => {
+      if (block.date < bookingDate || block.date > bookingEndDate) return;
+      const blockStart = block.allDay ? 0 : block.startTime;
+      const blockEnd = block.allDay ? 24 : block.endTime;
+      if (blockEnd <= bookingStart || blockStart >= bookingEnd) return;
+      busyCFIIds.add(block.instructorId);
+    });
     
     return activeCFIs.map(cfi => ({
       ...cfi,
       isBusy: busyCFIIds.has(cfi.id)
     }));
-  }, [instructors, bookings, formData.date, formData.endDate, formData.startTime, formData.endTime, isEditing, booking]);
+  }, [instructors, bookings, cfiBlocks, formData.date, formData.endDate, formData.startTime, formData.endTime, isEditing, booking]);
   
   // Calculate duration across days
   const calculateDuration = () => {
