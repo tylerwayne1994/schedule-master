@@ -754,8 +754,13 @@ export function ScheduleProvider({ children }) {
           return { success: true, message: 'Booking cancelled (could not fully delete)' };
         }
       }
+      
+      // Success - remove from local state
+      setBookings(prev => prev.filter(b => b.id !== id));
+      return { success: true };
     }
 
+    // Non-Supabase mode
     setBookings(prev => prev.filter(b => b.id !== id));
     return { success: true };
   };

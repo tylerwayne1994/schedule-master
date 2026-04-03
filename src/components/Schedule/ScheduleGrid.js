@@ -35,6 +35,7 @@ function ScheduleGrid() {
   const [dragOffset, setDragOffset] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when switching from calendar
   
   // Drag-to-scroll state
   const [isDragging, setIsDragging] = useState(false);
@@ -57,8 +58,29 @@ function ScheduleGrid() {
     return () => clearInterval(timer);
   }, []);
 
+  // Scroll to clicked date when coming from calendar view
+  useEffect(() => {
+    if (scrollToDate && viewMode === 'timeline' && scrollRef.current) {
+      // Find the day index in the current week
+      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === scrollToDate);
+      
+      if (dayIndex >= 0) {
+        // Scroll to that day at business hours start
+        const dayOffset = dayIndex * dayWidth;
+        const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
+        scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
+      }
+      
+      // Clear the scroll target
+      setScrollToDate(null);
+    }
+  }, [scrollToDate, viewMode, weekDays, dayWidth, slotWidth]);
+
   // Scroll to business hours (5am) on load, or current time if within view
   useEffect(() => {
+    // Don't run this if we're scrolling to a specific date from calendar
+    if (scrollToDate) return;
+    
     if (scrollRef.current) {
       const now = new Date();
       const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd'));
@@ -82,7 +104,7 @@ function ScheduleGrid() {
         scrollRef.current.scrollLeft = businessStartOffset;
       }
     }
-  }, [weekDays, slotWidth, dayWidth]);
+  }, [weekDays, slotWidth, dayWidth, scrollToDate]);
 
   // Drag-to-scroll handlers
   const handleMouseDown = useCallback((e) => {
@@ -179,7 +201,8 @@ function ScheduleGrid() {
     const clickedDate = new Date(year, month - 1, day);
     const newWeekStart = startOfWeek(clickedDate, { weekStartsOn: 0 });
     
-    // Update both states
+    // Set the scroll target BEFORE changing view
+    setScrollToDate(dateStr);
     setWeekStart(newWeekStart);
     setViewMode('timeline');
   };
