@@ -654,13 +654,23 @@ export function ScheduleProvider({ children }) {
 
   const deleteBooking = async (id) => {
     if (isSupabaseConfigured()) {
+      // Try RPC first
       const { error } = await supabase.rpc('delete_booking_record', {
         p_booking_id: id
       });
 
       if (error) {
-        console.error('Failed to delete booking:', error);
-        return { success: false, error: error?.message || 'Unable to delete booking' };
+        console.error('RPC delete failed:', error);
+        // Fallback to direct delete
+        const { error: directError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', id);
+
+        if (directError) {
+          console.error('Direct delete also failed:', directError);
+          return { success: false, error: directError?.message || 'Unable to delete booking' };
+        }
       }
     }
 
