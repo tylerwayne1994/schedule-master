@@ -207,31 +207,39 @@ export function ScheduleProvider({ children }) {
   };
 
   const loadCfiBlocks = async () => {
+    let dbBlocks = null;
+    
     if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('cfi_blocks')
-        .select('*')
-        .order('date');
+      try {
+        const { data, error } = await supabase
+          .from('cfi_blocks')
+          .select('*')
+          .order('date');
 
-      if (data && !error) {
-        setCfiBlocks(data.map(b => ({
-          id: b.id,
-          instructorId: b.instructor_id,
-          date: b.date,
-          startTime: typeof b.start_time === 'number' ? b.start_time : parseFloat(b.start_time),
-          endTime: typeof b.end_time === 'number' ? b.end_time : parseFloat(b.end_time),
-          allDay: b.all_day || false,
-          reason: b.reason || ''
-        })));
-        return;
+        if (data && !error) {
+          dbBlocks = data.map(b => ({
+            id: b.id,
+            instructorId: b.instructor_id,
+            date: b.date,
+            startTime: typeof b.start_time === 'number' ? b.start_time : parseFloat(b.start_time),
+            endTime: typeof b.end_time === 'number' ? b.end_time : parseFloat(b.end_time),
+            allDay: b.all_day || false,
+            reason: b.reason || ''
+          }));
+        }
+      } catch (err) {
+        console.log('cfi_blocks table not available');
       }
-      // Table might not exist yet - fall through to localStorage
-      console.log('cfi_blocks table not available, using localStorage');
     }
 
+    // Merge DB blocks with localStorage blocks (localStorage is always the fallback)
     const stored = localStorage.getItem('nlh_cfi_blocks');
-    if (stored) {
-      setCfiBlocks(JSON.parse(stored));
+    const localBlocks = stored ? JSON.parse(stored) : [];
+    
+    if (dbBlocks && dbBlocks.length > 0) {
+      setCfiBlocks(dbBlocks);
+    } else if (localBlocks.length > 0) {
+      setCfiBlocks(localBlocks);
     }
   };
 
@@ -478,49 +486,62 @@ export function ScheduleProvider({ children }) {
       reason: blockData.reason || ''
     };
 
-    if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('cfi_blocks')
-        .insert({
-          instructor_id: newBlock.instructorId,
-          date: newBlock.date,
-          start_time: newBlock.startTime,
-          end_time: newBlock.endTime,
-          all_day: newBlock.allDay,
-          reason: newBlock.reason
-        })
-        .select()
-        .single();
+    // Update state immediately so UI shows the block right away
+    setCfiBlocks(prev => [...prev, newBlock]);
 
-      if (data && !error) {
-        newBlock.id = data.id;
-      } else if (error) {
-        console.log('cfi_blocks insert failed (table may not exist), storing locally:', error.message);
+    let savedToDb = false;
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('cfi_blocks')
+          .insert({
+            instructor_id: newBlock.instructorId,
+            date: newBlock.date,
+            start_time: newBlock.startTime,
+            end_time: newBlock.endTime,
+            all_day: newBlock.allDay,
+            reason: newBlock.reason
+          })
+          .select()
+          .single();
+
+        if (data && !error) {
+          newBlock.id = data.id;
+          // Update the id in state
+          setCfiBlocks(prev => prev.map(b => b.date === newBlock.date && b.instructorId === newBlock.instructorId && b.id.startsWith('block-') ? { ...b, id: data.id } : b));
+          savedToDb = true;
+        }
+      } catch (err) {
+        console.log('cfi_blocks table not available:', err.message);
       }
     }
 
-    setCfiBlocks(prev => {
-      const updated = [...prev, newBlock];
-      if (!isSupabaseConfigured()) {
-        localStorage.setItem('nlh_cfi_blocks', JSON.stringify(updated));
-      }
-      return updated;
-    });
+    // Always save to localStorage as fallback
+    if (!savedToDb) {
+      const allBlocks = [...(JSON.parse(localStorage.getItem('nlh_cfi_blocks') || '[]')), newBlock];
+      localStorage.setItem('nlh_cfi_blocks', JSON.stringify(allBlocks));
+    }
+
     return { success: true, block: newBlock };
   };
 
   const deleteCfiBlock = async (id) => {
-    if (isSupabaseConfigured()) {
-      await supabase.from('cfi_blocks').delete().eq('id', id);
-    }
-
+    // Update state immediately
     setCfiBlocks(prev => {
       const updated = prev.filter(b => b.id !== id);
-      if (!isSupabaseConfigured()) {
-        localStorage.setItem('nlh_cfi_blocks', JSON.stringify(updated));
-      }
+      // Always update localStorage
+      localStorage.setItem('nlh_cfi_blocks', JSON.stringify(updated));
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('cfi_blocks').delete().eq('id', id);
+      } catch (err) {
+        console.log('cfi_blocks delete failed:', err.message);
+      }
+    }
+
     return { success: true };
   };
 
