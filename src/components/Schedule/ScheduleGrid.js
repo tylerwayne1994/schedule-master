@@ -203,14 +203,20 @@ function ScheduleGrid() {
     
     bookings.forEach(booking => {
       if (booking.status === 'cancelled') return;
+      if (!booking.date || typeof booking.date !== 'string') return;
       
       // Parse dates as local dates to avoid timezone issues
       // booking.date is like "2026-04-03"
-      const [startYear, startMonth, startDay] = booking.date.split('-').map(Number);
+      const startParts = booking.date.split('-');
+      if (startParts.length !== 3) return;
+      const [startYear, startMonth, startDay] = startParts.map(Number);
       const startDate = new Date(startYear, startMonth - 1, startDay);
       
       const endDateStr = booking.endDate || booking.date;
-      const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+      if (typeof endDateStr !== 'string') return;
+      const endParts = endDateStr.split('-');
+      if (endParts.length !== 3) return;
+      const [endYear, endMonth, endDay] = endParts.map(Number);
       const endDate = new Date(endYear, endMonth - 1, endDay);
       
       // Add booking to each day it spans
@@ -655,11 +661,13 @@ function ScheduleGrid() {
                       {filteredDayBookings.slice(0, 3).map((booking, bIndex) => {
                         const isOwner = booking.userId === currentUser?.id;
                         const isMaintenance = booking.type === 'maintenance';
-                        // Format times
+                        // Format times - ensure timeStr is a string
                         const formatTime = (timeStr) => {
-                          if (!timeStr) return '';
-                          const [hours, minutes] = timeStr.split(':');
-                          const h = parseInt(hours);
+                          if (!timeStr || typeof timeStr !== 'string') return '';
+                          const parts = timeStr.split(':');
+                          if (parts.length < 2) return timeStr;
+                          const h = parseInt(parts[0]);
+                          const minutes = parts[1];
                           const ampm = h >= 12 ? 'p' : 'a';
                           const h12 = h % 12 || 12;
                           return `${h12}${minutes !== '00' ? ':' + minutes : ''}${ampm}`;
