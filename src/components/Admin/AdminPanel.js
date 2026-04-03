@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { addDays, format, startOfWeek } from 'date-fns';
+import { addDays, format, startOfWeek, startOfMonth, addMonths, subMonths, isSameMonth, isSameDay } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -934,9 +934,11 @@ function MaintenanceManagement() {
 }
 
 function InstructorManagement() {
-  const { instructors, addInstructor, updateInstructor, deleteInstructor } = useSchedule();
+  const { instructors, bookings, addInstructor, updateInstructor, deleteInstructor } = useSchedule();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedCalDate, setSelectedCalDate] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -993,6 +995,78 @@ function InstructorManagement() {
     if (window.confirm(`Are you sure you want to delete CFI "${name}"?`)) {
       deleteInstructor(id);
     }
+  };
+
+  // Build a map of date -> array of booked instructor IDs with their booking times
+  const cfiBookingsByDate = useMemo(() => {
+    const map = new Map();
+    const activeBookings = bookings.filter(b => b.status !== 'cancelled' && b.instructorId);
+    
+    activeBookings.forEach(booking => {
+      const startDate = booking.date;
+      const endDate = booking.endDate || booking.date;
+      
+      // Parse dates
+      const [sy, sm, sd] = startDate.split('-').map(Number);
+      const [ey, em, ed] = endDate.split('-').map(Number);
+      const start = new Date(sy, sm - 1, sd);
+      const end = new Date(ey, em - 1, ed);
+      
+      let current = new Date(start);
+      while (current <= end) {
+        const dateStr = format(current, 'yyyy-MM-dd');
+        if (!map.has(dateStr)) map.set(dateStr, []);
+        map.get(dateStr).push({
+          instructorId: booking.instructorId,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          customerName: booking.customerName,
+          type: booking.type
+        });
+        current = addDays(current, 1);
+      }
+    });
+    
+    return map;
+  }, [bookings]);
+
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      days.push(addDays(calStart, i));
+    }
+    return days;
+  }, [currentMonth]);
+
+  // Get active instructors
+  const activeCFIs = useMemo(() => instructors.filter(i => i.status === 'active'), [instructors]);
+
+  // For the selected date, get detailed CFI availability
+  const selectedDateDetails = useMemo(() => {
+    if (!selectedCalDate) return null;
+    const dateStr = format(selectedCalDate, 'yyyy-MM-dd');
+    const dayBookings = cfiBookingsByDate.get(dateStr) || [];
+    
+    return activeCFIs.map(cfi => {
+      const cfiBookings = dayBookings.filter(b => b.instructorId === cfi.id);
+      return {
+        ...cfi,
+        bookings: cfiBookings,
+        isBooked: cfiBookings.length > 0
+      };
+    });
+  }, [selectedCalDate, cfiBookingsByDate, activeCFIs]);
+
+  const formatTimeShort = (decimal) => {
+    if (decimal === null || decimal === undefined) return '';
+    const h = Math.floor(decimal);
+    const m = decimal % 1 === 0.5 ? '30' : '00';
+    const ampm = h >= 12 ? 'p' : 'a';
+    const h12 = h % 12 || 12;
+    return `${h12}${m !== '00' ? ':' + m : ''}${ampm}`;
   };
 
   return (
@@ -1062,6 +1136,95 @@ function InstructorManagement() {
           </div>
         </form>
       )}
+
+      {/* CFI Availability Calendar */}
+      <div className="cfi-calendar-section">
+        <div className="cfi-calendar-header">
+          <h3>CFI Availability</h3>
+          <div className="cfi-calendar-nav">
+            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>&lt;</button>
+            <span>{format(currentMonth, 'MMMM yyyy')}</span>
+            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>&gt;</button>
+          </div>
+        </div>
+        
+        <div className="cfi-calendar-grid">
+          <div className="cfi-cal-header-row">
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+              <div key={d} className="cfi-cal-header-cell">{d}</div>
+            ))}
+          </div>
+          <div className="cfi-cal-body">
+            {calendarDays.map((day, index) => {
+              const dateStr = format(day, 'yyyy-MM-dd');
+              const isThisMonth = isSameMonth(day, currentMonth);
+              const isToday = isSameDay(day, new Date());
+              const isSelected = selectedCalDate && isSameDay(day, selectedCalDate);
+              const dayBookings = cfiBookingsByDate.get(dateStr) || [];
+              
+              // Count how many CFIs are booked vs available
+              const bookedCFIIds = new Set(dayBookings.map(b => b.instructorId));
+              const bookedCount = activeCFIs.filter(c => bookedCFIIds.has(c.id)).length;
+              const availableCount = activeCFIs.length - bookedCount;
+              
+              return (
+                <div 
+                  key={index}
+                  className={`cfi-cal-day ${!isThisMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
+                  onClick={() => setSelectedCalDate(day)}
+                >
+                  <div className="cfi-cal-day-num">{format(day, 'd')}</div>
+                  {isThisMonth && activeCFIs.length > 0 && (
+                    <div className="cfi-cal-availability">
+                      <span className={`cfi-avail-count ${availableCount === 0 ? 'none' : availableCount === activeCFIs.length ? 'all' : 'partial'}`}>
+                        {availableCount}/{activeCFIs.length}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="cfi-cal-legend">
+          <span className="cfi-legend-item"><span className="cfi-legend-dot all"></span> All Available</span>
+          <span className="cfi-legend-item"><span className="cfi-legend-dot partial"></span> Some Booked</span>
+          <span className="cfi-legend-item"><span className="cfi-legend-dot none"></span> All Booked</span>
+        </div>
+
+        {/* Selected date detail panel */}
+        {selectedCalDate && selectedDateDetails && (
+          <div className="cfi-day-detail">
+            <h4>{format(selectedCalDate, 'EEEE, MMMM d, yyyy')}</h4>
+            <div className="cfi-detail-list">
+              {selectedDateDetails.map(cfi => (
+                <div key={cfi.id} className={`cfi-detail-row ${cfi.isBooked ? 'booked' : 'available'}`}>
+                  <div className="cfi-detail-name">
+                    <span className={`cfi-status-dot ${cfi.isBooked ? 'busy' : 'free'}`}></span>
+                    {cfi.name}
+                    {Array.isArray(cfi.certifications) && cfi.certifications.length > 0 && (
+                      <span className="cfi-detail-certs">({cfi.certifications.join(', ')})</span>
+                    )}
+                  </div>
+                  <div className="cfi-detail-schedule">
+                    {cfi.bookings.length === 0 ? (
+                      <span className="cfi-free-text">Available all day</span>
+                    ) : (
+                      cfi.bookings.map((b, i) => (
+                        <div key={i} className="cfi-booking-slot">
+                          {formatTimeShort(b.startTime)} - {formatTimeShort(b.endTime)}
+                          <span className="cfi-booking-info">{b.customerName || b.type}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <table className="admin-table">
         <thead>

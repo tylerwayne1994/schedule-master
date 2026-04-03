@@ -713,6 +713,8 @@ function ScheduleGrid() {
                                              booking.endTime !== null && booking.endTime !== undefined)
                           ? `${formatTime(booking.startTime)}-${formatTime(booking.endTime)}` 
                           : '';
+                        const heli = helicopters.find(h => h.id === booking.helicopterId);
+                        const tailNum = heli?.tailNumber || '';
                         return (
                           <div 
                             key={bIndex}
@@ -720,10 +722,13 @@ function ScheduleGrid() {
                             style={{ 
                               background: isMaintenance ? '#dc2626' : (isOwner ? '#16a34a' : '#2563eb')
                             }}
-                            title={`${booking.customerName || 'Booking'} - ${helicopters.find(h => h.id === booking.helicopterId)?.tailNumber || ''} - ${booking.startTime}-${booking.endTime}`}
+                            title={`${isMaintenance ? 'Maintenance' : (booking.customerName || 'Booking')} - ${tailNum} - ${timeDisplay}`}
                           >
                             <span className="calendar-booking-text">
-                              {booking.customerName?.split(' ')[0] || 'Booked'} {timeDisplay}
+                              {isMaintenance 
+                                ? `${tailNum || 'Maint'} ${timeDisplay}`
+                                : `${booking.customerName?.split(' ')[0] || 'Booked'} ${timeDisplay}`
+                              }
                             </span>
                           </div>
                         );

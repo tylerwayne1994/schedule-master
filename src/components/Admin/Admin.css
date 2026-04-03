@@ -565,6 +565,283 @@
   overflow-y: auto;
 }
 
+/* CFI Availability Calendar */
+.cfi-calendar-section {
+  margin: 20px 0;
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cfi-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #1e3a5f;
+  color: white;
+}
+
+.cfi-calendar-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cfi-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cfi-calendar-nav button {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.cfi-calendar-nav button:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.cfi-calendar-nav span {
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 140px;
+  text-align: center;
+}
+
+.cfi-calendar-grid {
+  background: white;
+}
+
+.cfi-cal-header-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #e6ebf2;
+}
+
+.cfi-cal-header-cell {
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.cfi-cal-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.cfi-cal-day {
+  min-height: 52px;
+  padding: 4px;
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cfi-cal-day:hover {
+  background: #f0f9ff;
+}
+
+.cfi-cal-day.other-month {
+  background: #fafbfc;
+}
+
+.cfi-cal-day.other-month .cfi-cal-day-num {
+  color: #c0c8d4;
+}
+
+.cfi-cal-day.today .cfi-cal-day-num {
+  background: #1e3a5f;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cfi-cal-day.selected {
+  background: #eff6ff;
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.cfi-cal-day-num {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cfi-cal-availability {
+  margin-top: 1px;
+}
+
+.cfi-avail-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
+.cfi-avail-count.all {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cfi-avail-count.partial {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.cfi-avail-count.none {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.cfi-cal-legend {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid #e6ebf2;
+  background: #fafbfc;
+}
+
+.cfi-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.cfi-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.cfi-legend-dot.all {
+  background: #16a34a;
+}
+
+.cfi-legend-dot.partial {
+  background: #eab308;
+}
+
+.cfi-legend-dot.none {
+  background: #dc2626;
+}
+
+/* Selected Day Detail Panel */
+.cfi-day-detail {
+  padding: 16px;
+  border-top: 1px solid #e6ebf2;
+  background: #f8fafc;
+}
+
+.cfi-day-detail h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: #1e3a5f;
+}
+
+.cfi-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cfi-detail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e6ebf2;
+}
+
+.cfi-detail-row.available {
+  border-left: 3px solid #16a34a;
+}
+
+.cfi-detail-row.booked {
+  border-left: 3px solid #eab308;
+}
+
+.cfi-detail-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #1e293b;
+}
+
+.cfi-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cfi-status-dot.free {
+  background: #16a34a;
+}
+
+.cfi-status-dot.busy {
+  background: #eab308;
+}
+
+.cfi-detail-certs {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.cfi-detail-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+
+.cfi-free-text {
+  font-size: 0.8rem;
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.cfi-booking-slot {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.cfi-booking-info {
+  margin-left: 6px;
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
 .admin-notification-empty {
   color: #6b7280;
   font-size: 0.9rem;

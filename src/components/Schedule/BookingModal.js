@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,7 +24,7 @@ function formatTimeLabel(decimal) {
 }
 
 function BookingModal({ booking, slot, onClose }) {
-  const { helicopters, instructors, createBooking, updateBooking, deleteBooking, cancelBooking } = useSchedule();
+  const { helicopters, instructors, bookings, createBooking, updateBooking, deleteBooking, cancelBooking } = useSchedule();
   const { currentUser, isAdmin, users, hasGoogleCalendarAccess, getGoogleAccessToken } = useAuth();
   
   const isEditing = !!booking;
@@ -227,6 +227,42 @@ function BookingModal({ booking, slot, onClose }) {
   const selectedInstructorCertifications = Array.isArray(selectedInstructor?.certifications)
     ? selectedInstructor.certifications
     : [];
+
+  // Filter instructors to show availability based on selected date/time
+  const availableInstructors = useMemo(() => {
+    const activeCFIs = instructors.filter(i => i.status === 'active');
+    if (!formData.date) return activeCFIs;
+    
+    const bookingDate = formData.date;
+    const bookingEndDate = formData.endDate || formData.date;
+    const bookingStart = parseFloat(formData.startTime);
+    const bookingEnd = parseFloat(formData.endTime);
+    
+    // Find all bookings that overlap with the selected date/time range (excluding current booking being edited)
+    const conflicting = bookings.filter(b => {
+      if (b.status === 'cancelled') return false;
+      if (!b.instructorId) return false;
+      if (isEditing && b.id === booking.id) return false; // Don't conflict with self
+      
+      const bStart = b.date;
+      const bEnd = b.endDate || b.date;
+      
+      // Check date overlap
+      if (bEnd < bookingDate || bStart > bookingEndDate) return false;
+      
+      // Check time overlap
+      if (b.endTime <= bookingStart || b.startTime >= bookingEnd) return false;
+      
+      return true;
+    });
+    
+    const busyCFIIds = new Set(conflicting.map(b => b.instructorId));
+    
+    return activeCFIs.map(cfi => ({
+      ...cfi,
+      isBusy: busyCFIIds.has(cfi.id)
+    }));
+  }, [instructors, bookings, formData.date, formData.endDate, formData.startTime, formData.endTime, isEditing, booking]);
   
   // Calculate duration across days
   const calculateDuration = () => {
@@ -492,11 +528,24 @@ function BookingModal({ booking, slot, onClose }) {
                 disabled={!canEdit}
               >
                 <option value="">No Instructor</option>
-                {instructors.filter(i => i.status === 'active').map(i => (
-                  <option key={i.id} value={i.id}>
-                    {i.name}{Array.isArray(i.certifications) && i.certifications.length > 0 ? ` (${i.certifications.join(', ')})` : ''}
-                  </option>
-                ))}
+                {availableInstructors.filter(i => !i.isBusy).length > 0 && (
+                  <optgroup label="Available">
+                    {availableInstructors.filter(i => !i.isBusy).map(i => (
+                      <option key={i.id} value={i.id}>
+                        {i.name}{Array.isArray(i.certifications) && i.certifications.length > 0 ? ` (${i.certifications.join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {availableInstructors.filter(i => i.isBusy).length > 0 && (
+                  <optgroup label="Booked at this time">
+                    {availableInstructors.filter(i => i.isBusy).map(i => (
+                      <option key={i.id} value={i.id} style={{ color: '#999' }}>
+                        {i.name} - BUSY{Array.isArray(i.certifications) && i.certifications.length > 0 ? ` (${i.certifications.join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           </div>
