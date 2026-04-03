@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { generateGoogleCalendarUrl, createGoogleCalendarEvent, generateBookingMailtoUrl } from '../../lib/notifications';
+import { sendCFINotification, isEmailConfigured } from '../../lib/emailService';
 import { validateBookingForm } from '../../utils/validation';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -158,6 +159,23 @@ function BookingModal({ booking, slot, onClose }) {
         return;
       }
       savedBooking = result.booking;
+    }
+
+    // Send automatic CFI notification when an instructor is assigned
+    const assignedInstructor = instructors.find(i => i.id === (savedBooking.instructorId || formData.instructorId));
+    const assignedHelicopter = helicopters.find(h => h.id === (savedBooking.helicopterId || formData.helicopterId));
+    
+    if (assignedInstructor?.email && isEmailConfigured()) {
+      // Send notification asynchronously (don't block UI)
+      sendCFINotification(savedBooking, assignedInstructor, assignedHelicopter)
+        .then(result => {
+          if (result.success) {
+            console.log('CFI notification sent to:', assignedInstructor.email);
+          } else {
+            console.warn('CFI notification failed:', result.error);
+          }
+        })
+        .catch(err => console.error('CFI notification error:', err));
     }
 
     if (sendEmailDraft) {
