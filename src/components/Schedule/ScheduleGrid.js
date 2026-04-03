@@ -35,7 +35,6 @@ function ScheduleGrid() {
   const [dragOffset, setDragOffset] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when switching from calendar
   
   // Drag-to-scroll state
   const [isDragging, setIsDragging] = useState(false);
@@ -44,6 +43,8 @@ function ScheduleGrid() {
   
   const gridRef = useRef(null);
   const scrollRef = useRef(null);
+  const scrollToDateRef = useRef(null); // Date to scroll to when switching from calendar
+  const hasInitialScrolled = useRef(false); // Track if initial scroll happened
   const slotWidth = Math.round(BASE_SLOT_WIDTH * zoomLevel);
   const dayWidth = slotWidth * SLOTS_PER_DAY;
 
@@ -58,30 +59,32 @@ function ScheduleGrid() {
     return () => clearInterval(timer);
   }, []);
 
-  // Scroll to clicked date when coming from calendar view
+  // Scroll to correct position when weekDays changes (from calendar click or week navigation)
   useEffect(() => {
-    if (scrollToDate && viewMode === 'timeline' && scrollRef.current) {
-      // Find the day index in the current week
-      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === scrollToDate);
+    if (!scrollRef.current || viewMode !== 'timeline') return;
+    
+    // Check if we have a specific date to scroll to from calendar click
+    const targetDate = scrollToDateRef.current;
+    
+    if (targetDate) {
+      // Scroll to the clicked date
+      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === targetDate);
       
       if (dayIndex >= 0) {
-        // Scroll to that day at business hours start
         const dayOffset = dayIndex * dayWidth;
         const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
         scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
       }
       
-      // Clear the scroll target
-      setScrollToDate(null);
+      // Clear the ref so future week changes don't use this date
+      scrollToDateRef.current = null;
+      return;
     }
-  }, [scrollToDate, viewMode, weekDays, dayWidth, slotWidth]);
-
-  // Scroll to business hours (5am) on load, or current time if within view
-  useEffect(() => {
-    // Don't run this if we're scrolling to a specific date from calendar
-    if (scrollToDate) return;
     
-    if (scrollRef.current) {
+    // Default scroll behavior: scroll to today if visible, otherwise to first day's business hours
+    // Only do this on initial mount, not on every week change
+    if (!hasInitialScrolled.current) {
+      hasInitialScrolled.current = true;
       const now = new Date();
       const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd'));
       
@@ -89,22 +92,19 @@ function ScheduleGrid() {
         const dayOffset = dayIndex * dayWidth;
         const currentHour = now.getHours();
         
-        // If current time is within business hours, scroll to show it
         if (currentHour >= BUSINESS_START_HOUR && currentHour <= BUSINESS_END_HOUR) {
           const hourOffset = currentHour * slotWidth * 2;
           scrollRef.current.scrollLeft = dayOffset + hourOffset - 200;
         } else {
-          // Otherwise scroll to business start (5am)
           const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
           scrollRef.current.scrollLeft = dayOffset + businessStartOffset;
         }
       } else {
-        // Not viewing current week, scroll to business hours of first day
         const businessStartOffset = BUSINESS_START_HOUR * slotWidth * 2;
         scrollRef.current.scrollLeft = businessStartOffset;
       }
     }
-  }, [weekDays, slotWidth, dayWidth, scrollToDate]);
+  }, [weekDays, slotWidth, dayWidth, viewMode]);
 
   // Drag-to-scroll handlers
   const handleMouseDown = useCallback((e) => {
@@ -201,8 +201,8 @@ function ScheduleGrid() {
     const clickedDate = new Date(year, month - 1, day);
     const newWeekStart = startOfWeek(clickedDate, { weekStartsOn: 0 });
     
-    // Set the scroll target BEFORE changing view
-    setScrollToDate(dateStr);
+    // Set the scroll target ref BEFORE changing view - using ref to avoid race conditions
+    scrollToDateRef.current = dateStr;
     setWeekStart(newWeekStart);
     setViewMode('timeline');
   };
