@@ -676,13 +676,26 @@ export function ScheduleProvider({ children }) {
 
   const cancelBooking = async (id) => {
     if (isSupabaseConfigured()) {
-      const { data, error } = await supabase.rpc('cancel_booking_record', {
+      // Try RPC first
+      let { data, error } = await supabase.rpc('cancel_booking_record', {
         p_booking_id: id
       });
 
+      // If RPC fails, try direct update
       if (error) {
-        console.error('Failed to cancel booking:', error);
-        return { success: false, error: error?.message || 'Unable to cancel booking' };
+        console.error('RPC cancel failed, trying direct update:', error);
+        const directResult = await supabase
+          .from('bookings')
+          .update({ status: 'cancelled' })
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (directResult.error) {
+          console.error('Direct cancel also failed:', directResult.error);
+          return { success: false, error: directResult.error?.message || 'Unable to cancel booking' };
+        }
+        data = directResult.data;
       }
 
       if (data) {
@@ -702,12 +715,20 @@ export function ScheduleProvider({ children }) {
   const deleteBooking = async (id) => {
     if (isSupabaseConfigured()) {
       // Try RPC first
-      const { error } = await supabase.rpc('delete_booking_record', {
-        p_booking_id: id
-      });
+      let rpcError = null;
+      try {
+        const { error } = await supabase.rpc('delete_booking_record', {
+          p_booking_id: id
+        });
+        rpcError = error;
+      } catch (err) {
+        console.error('RPC delete threw exception:', err);
+        rpcError = err;
+      }
 
-      if (error) {
-        console.error('RPC delete failed:', error);
+      if (rpcError) {
+        console.error('RPC delete failed:', rpcError);
+        
         // Fallback to direct delete
         const { error: directError } = await supabase
           .from('bookings')
@@ -716,7 +737,21 @@ export function ScheduleProvider({ children }) {
 
         if (directError) {
           console.error('Direct delete also failed:', directError);
-          return { success: false, error: directError?.message || 'Unable to delete booking' };
+          
+          // Last resort: try to cancel instead of delete
+          const { error: cancelError } = await supabase
+            .from('bookings')
+            .update({ status: 'cancelled' })
+            .eq('id', id);
+          
+          if (cancelError) {
+            console.error('Even cancel failed:', cancelError);
+            return { success: false, error: 'Unable to delete or cancel booking. Please check your permissions.' };
+          }
+          
+          // Cancelled successfully as fallback
+          setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+          return { success: true, message: 'Booking cancelled (could not fully delete)' };
         }
       }
     }
