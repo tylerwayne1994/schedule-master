@@ -276,8 +276,17 @@ export function AuthProvider({ children }) {
     }
     
     if (isSupabaseConfigured()) {
-      // Note: Deleting users requires admin privileges via Supabase dashboard
-      return { success: false, error: 'User deletion requires Supabase admin access' };
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
+        if (error) throw error;
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
     } else {
       setUsers(prev => prev.filter(u => u.id !== userId));
       return { success: true };

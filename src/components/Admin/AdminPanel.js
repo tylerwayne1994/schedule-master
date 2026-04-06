@@ -252,9 +252,9 @@ function HelicopterManagement() {
 function UserManagement() {
   const { users, deleteUser } = useAuth();
 
-  const handleDelete = (userId, userName) => {
+  const handleDelete = async (userId, userName) => {
     if (window.confirm(`Are you sure you want to delete user "${userName}"?`)) {
-      const result = deleteUser(userId);
+      const result = await deleteUser(userId);
       if (!result.success) {
         alert(result.error);
       }
