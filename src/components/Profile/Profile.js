@@ -49,14 +49,18 @@ function Profile() {
 
   const handleSave = async () => {
     setSaveError('');
-    const result = await updateUser(currentUser.id, formData);
-    if (!result?.success) {
-      setSaveError(result?.error || 'Unable to save profile changes');
-      return;
+    try {
+      const result = await updateUser(currentUser.id, formData);
+      if (!result?.success) {
+        setSaveError(result?.error || 'Unable to save profile changes');
+        return;
+      }
+      setIsEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err.message || 'Unable to save profile changes');
     }
-    setIsEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   const handlePinSubmit = async (e) => {

@@ -237,17 +237,22 @@ export function AuthProvider({ children }) {
 
   const updateUser = async (userId, updates) => {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           name: updates.name,
+          email: updates.email,
           phone: updates.phone,
           address: updates.address
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
 
       if (error) {
         return { success: false, error: error.message };
+      }
+      if (!data || data.length === 0) {
+        return { success: false, error: 'Update failed - profile not found or permission denied' };
       }
       
       if (currentUser?.id === userId) {
