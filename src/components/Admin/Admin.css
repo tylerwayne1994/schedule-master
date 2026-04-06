@@ -641,7 +641,7 @@
 }
 
 .cfi-cal-day {
-  min-height: 52px;
+  min-height: 70px;
   padding: 4px;
   border-right: 1px solid #f1f5f9;
   border-bottom: 1px solid #f1f5f9;
@@ -649,7 +649,6 @@
   transition: background 0.15s;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
 }
 
@@ -686,32 +685,34 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #374151;
+  margin-bottom: 2px;
 }
 
-.cfi-cal-availability {
-  margin-top: 1px;
+.cfi-cal-names {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
 }
 
-.cfi-avail-count {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 8px;
+.cfi-cal-name {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.cfi-avail-count.all {
-  background: #dcfce7;
+.cfi-cal-name.free {
   color: #166534;
+  background: #dcfce7;
 }
 
-.cfi-avail-count.partial {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.cfi-avail-count.none {
-  background: #fecaca;
+.cfi-cal-name.busy {
   color: #991b1b;
+  background: #fecaca;
 }
 
 .cfi-cal-legend {
@@ -738,10 +739,6 @@
 
 .cfi-legend-dot.all {
   background: #16a34a;
-}
-
-.cfi-legend-dot.partial {
-  background: #eab308;
 }
 
 .cfi-legend-dot.none {
@@ -782,7 +779,7 @@
 }
 
 .cfi-detail-row.booked {
-  border-left: 3px solid #eab308;
+  border-left: 3px solid #dc2626;
 }
 
 .cfi-detail-name {
@@ -806,7 +803,7 @@
 }
 
 .cfi-status-dot.busy {
-  background: #eab308;
+  background: #dc2626;
 }
 
 .cfi-detail-certs {

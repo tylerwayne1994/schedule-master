@@ -1187,10 +1187,8 @@ function InstructorManagement() {
               const isSelected = selectedCalDate && isSameDay(day, selectedCalDate);
               const dayBookings = cfiBookingsByDate.get(dateStr) || [];
               
-              // Count how many CFIs are booked vs available
+              // Build per-CFI status for this day
               const bookedCFIIds = new Set(dayBookings.map(b => b.instructorId));
-              const bookedCount = activeCFIs.filter(c => bookedCFIIds.has(c.id)).length;
-              const availableCount = activeCFIs.length - bookedCount;
               
               return (
                 <div 
@@ -1200,10 +1198,15 @@ function InstructorManagement() {
                 >
                   <div className="cfi-cal-day-num">{format(day, 'd')}</div>
                   {isThisMonth && activeCFIs.length > 0 && (
-                    <div className="cfi-cal-availability">
-                      <span className={`cfi-avail-count ${availableCount === 0 ? 'none' : availableCount === activeCFIs.length ? 'all' : 'partial'}`}>
-                        {availableCount}/{activeCFIs.length}
-                      </span>
+                    <div className="cfi-cal-names">
+                      {activeCFIs.map(cfi => {
+                        const isBusy = bookedCFIIds.has(cfi.id);
+                        return (
+                          <div key={cfi.id} className={`cfi-cal-name ${isBusy ? 'busy' : 'free'}`}>
+                            {cfi.name.split(' ')[0]}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1213,9 +1216,8 @@ function InstructorManagement() {
         </div>
 
         <div className="cfi-cal-legend">
-          <span className="cfi-legend-item"><span className="cfi-legend-dot all"></span> All Available</span>
-          <span className="cfi-legend-item"><span className="cfi-legend-dot partial"></span> Some Booked</span>
-          <span className="cfi-legend-item"><span className="cfi-legend-dot none"></span> All Booked</span>
+          <span className="cfi-legend-item"><span className="cfi-legend-dot all"></span> Available</span>
+          <span className="cfi-legend-item"><span className="cfi-legend-dot none"></span> Booked / Blocked</span>
         </div>
 
         {/* Selected date detail panel */}
