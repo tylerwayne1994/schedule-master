@@ -277,11 +277,18 @@ export function AuthProvider({ children }) {
     
     if (isSupabaseConfigured()) {
       try {
-        const { error } = await supabase
+        // Delete user's bookings first (FK constraint)
+        await supabase.from('bookings').delete().eq('user_id', userId);
+        
+        const { data, error } = await supabase
           .from('profiles')
           .delete()
-          .eq('id', userId);
+          .eq('id', userId)
+          .select();
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error('Delete blocked - check RLS policies in Supabase');
+        }
         setUsers(prev => prev.filter(u => u.id !== userId));
         return { success: true };
       } catch (err) {
