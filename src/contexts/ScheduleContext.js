@@ -72,6 +72,7 @@ export function ScheduleProvider({ children }) {
     actualHoursStatus: b.actual_hours_status || 'not_submitted',
     actualHoursApprovedAt: b.actual_hours_approved_at || null,
     actualHoursApprovedBy: b.actual_hours_approved_by || null,
+    promptDismissed: b.prompt_dismissed || false,
     createdAt: b.created_at
   });
 
@@ -93,7 +94,8 @@ export function ScheduleProvider({ children }) {
     actual_hours_submitted_at: booking.actualHoursSubmittedAt ?? null,
     actual_hours_status: booking.actualHoursStatus ?? 'not_submitted',
     actual_hours_approved_at: booking.actualHoursApprovedAt ?? null,
-    actual_hours_approved_by: booking.actualHoursApprovedBy ?? null
+    actual_hours_approved_by: booking.actualHoursApprovedBy ?? null,
+    prompt_dismissed: booking.promptDismissed ?? false
   });
 
   const fetchBookingById = async (bookingId) => {
@@ -954,6 +956,21 @@ export function ScheduleProvider({ children }) {
     return { success: true };
   };
 
+  const dismissFlightPrompt = async (bookingId) => {
+    // Immediately update local state
+    setBookings(prev => prev.map(b =>
+      b.id === bookingId ? { ...b, promptDismissed: true } : b
+    ));
+
+    // Persist to Supabase
+    if (isSupabaseConfigured()) {
+      await supabase
+        .from('bookings')
+        .update({ prompt_dismissed: true })
+        .eq('id', bookingId);
+    }
+  };
+
   const getBookingsForDate = (date) => {
     // Include multi-day bookings that span this date (use string comparison)
     return bookings.filter(b => {
@@ -995,6 +1012,7 @@ export function ScheduleProvider({ children }) {
     deleteBooking,
     submitFlightHours,
     approveFlightHours,
+    dismissFlightPrompt,
     completeFlightHours: submitFlightHours,
     getBookingsForDate,
     getBookingsForHelicopter,

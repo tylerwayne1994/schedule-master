@@ -23,7 +23,7 @@ import './styles/accessibility.css';
 
 function AppContent() {
   const { currentUser, loading, isAdmin } = useAuth();
-  const { bookings, approveFlightHours } = useSchedule();
+  const { bookings, approveFlightHours, dismissFlightPrompt } = useSchedule();
   const [authMode, setAuthMode] = useState('login');
   const [currentPage, setCurrentPage] = useState('schedule');
   const [forceShowBookingId, setForceShowBookingId] = useState(null);
@@ -34,50 +34,11 @@ function AppContent() {
   const [adminApprovalDismissed, setAdminApprovalDismissed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Track which notification IDs have already been shown/dismissed (survives reload)
-  const [shownNotificationIds, setShownNotificationIds] = useState(() => {
-    try {
-      const stored = localStorage.getItem('nlh_shown_notification_ids');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('nlh_shown_notification_ids', JSON.stringify(shownNotificationIds.slice(-100)));
-    } catch { /* ignored */ }
-  }, [shownNotificationIds]);
-
-  // Persist dismissed booking IDs in localStorage so they survive page refresh
-  const [dismissedBookingIds, setDismissedBookingIds] = useState(() => {
-    try {
-      const stored = localStorage.getItem('nlh_dismissed_flight_prompts');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Save dismissed IDs to localStorage when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('nlh_dismissed_flight_prompts', JSON.stringify(dismissedBookingIds));
-    } catch {
-      // localStorage might be full or unavailable
-    }
-  }, [dismissedBookingIds]);
-
   const dismissBookingPrompt = useCallback((bookingId) => {
-    setDismissedBookingIds(prev => {
-      if (prev.includes(bookingId)) return prev;
-      // Keep only last 50 to prevent localStorage from growing too large
-      const updated = [...prev, bookingId].slice(-50);
-      return updated;
-    });
+    // Persist dismissal to Supabase via ScheduleContext
+    dismissFlightPrompt(bookingId);
     setForceShowBookingId(null);
-  }, []);
+  }, [dismissFlightPrompt]);
 
   const userId = currentUser?.id;
 
@@ -112,14 +73,14 @@ function AppContent() {
       .filter(b => (b.status || 'confirmed') === 'confirmed')
       .filter(b => (b.actualHours == null))
       .filter(b => (b.actualHoursStatus || 'not_submitted') === 'not_submitted')
-      .filter(b => !dismissedBookingIds.includes(b.id))
+      .filter(b => !b.promptDismissed)
       .filter(isPastEndPlusOneMinute)
       .sort((a, b) => {
         const aEnd = new Date(`${(a.endDate || a.date)}T00:00:00`).getTime();
         const bEnd = new Date(`${(b.endDate || b.date)}T00:00:00`).getTime();
         return aEnd - bEnd;
       })[0];
-  }, [bookings, userId, dismissedBookingIds, forceShowBookingId]);
+  }, [bookings, userId, forceShowBookingId]);
 
   React.useEffect(() => {
     const loadUserNotifications = async () => {
@@ -141,14 +102,11 @@ function AppContent() {
       }
 
       if (!error && data) {
-        // Filter out notifications already shown/dismissed in previous sessions
-        const unseen = data.filter(n => !shownNotificationIds.includes(n.id));
-        setUserNotifications(unseen);
+        setUserNotifications(data);
       }
     };
 
     loadUserNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
   const activeUserNotification = userNotifications[0] || null;
@@ -199,14 +157,27 @@ function AppContent() {
 
   // Show admin approval popup on login if there are NEW pending approvals
   useEffect(() => {
-    if (isAdmin() && pendingApprovals.length > 0 && !adminApprovalDismissed) {
-      // Check if these are new approvals the admin hasn't seen yet
+    const checkNewApprovals = async () => {
+      if (!isAdmin() || pendingApprovals.length === 0 || adminApprovalDismissed) return;
+      
       const approvalIds = pendingApprovals.map(b => b.id).sort().join(',');
-      const lastSeenApprovals = localStorage.getItem('nlh_admin_seen_approvals');
-      if (approvalIds !== lastSeenApprovals) {
+      
+      if (isSupabaseConfigured() && currentUser?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('last_seen_approvals')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (data?.last_seen_approvals !== approvalIds) {
+          setShowAdminApprovalModal(true);
+        }
+      } else {
         setShowAdminApprovalModal(true);
       }
-    }
+    };
+
+    checkNewApprovals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pendingApprovals.length, adminApprovalDismissed]);
 
@@ -222,9 +193,15 @@ function AppContent() {
   const handleCloseAdminApprovalModal = () => {
     setShowAdminApprovalModal(false);
     setAdminApprovalDismissed(true);
-    // Remember which approvals the admin has already seen
+    // Save which approvals the admin has seen to Supabase
     const approvalIds = pendingApprovals.map(b => b.id).sort().join(',');
-    localStorage.setItem('nlh_admin_seen_approvals', approvalIds);
+    if (isSupabaseConfigured() && currentUser?.id) {
+      supabase
+        .from('profiles')
+        .update({ last_seen_approvals: approvalIds })
+        .eq('id', currentUser.id)
+        .then(() => {});
+    }
   };
 
   const handleOpenMessageCenter = () => {
@@ -233,16 +210,20 @@ function AppContent() {
   };
 
   const handleOpenFlightReview = useCallback((bookingId) => {
-    // Remove from dismissed list and force show this booking
-    setDismissedBookingIds(prev => prev.filter(id => id !== bookingId));
+    // Un-dismiss in Supabase and force show this booking
+    if (isSupabaseConfigured()) {
+      supabase
+        .from('bookings')
+        .update({ prompt_dismissed: false })
+        .eq('id', bookingId)
+        .then(() => {});
+    }
     setForceShowBookingId(bookingId);
   }, []);
 
   const markUserNotificationRead = async (notificationId) => {
-    // Optimistically remove from local state first
+    // Optimistically remove from local state
     setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
-    // Track as shown so it never pops up again even if DB update fails
-    setShownNotificationIds(prev => prev.includes(notificationId) ? prev : [...prev, notificationId]);
     
     if (!notificationId || !isSupabaseConfigured()) {
       return;
