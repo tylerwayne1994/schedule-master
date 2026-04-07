@@ -34,6 +34,22 @@ function AppContent() {
   const [adminApprovalDismissed, setAdminApprovalDismissed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Track which notification IDs have already been shown/dismissed (survives reload)
+  const [shownNotificationIds, setShownNotificationIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('nlh_shown_notification_ids');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nlh_shown_notification_ids', JSON.stringify(shownNotificationIds.slice(-100)));
+    } catch { /* ignored */ }
+  }, [shownNotificationIds]);
+
   // Persist dismissed booking IDs in localStorage so they survive page refresh
   const [dismissedBookingIds, setDismissedBookingIds] = useState(() => {
     try {
@@ -125,11 +141,14 @@ function AppContent() {
       }
 
       if (!error && data) {
-        setUserNotifications(data);
+        // Filter out notifications already shown/dismissed in previous sessions
+        const unseen = data.filter(n => !shownNotificationIds.includes(n.id));
+        setUserNotifications(unseen);
       }
     };
 
     loadUserNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
   const activeUserNotification = userNotifications[0] || null;
@@ -178,11 +197,17 @@ function AppContent() {
     loadUnreadCount();
   }, [loadUnreadCount]);
 
-  // Show admin approval popup on login if there are pending approvals
+  // Show admin approval popup on login if there are NEW pending approvals
   useEffect(() => {
     if (isAdmin() && pendingApprovals.length > 0 && !adminApprovalDismissed) {
-      setShowAdminApprovalModal(true);
+      // Check if these are new approvals the admin hasn't seen yet
+      const approvalIds = pendingApprovals.map(b => b.id).sort().join(',');
+      const lastSeenApprovals = localStorage.getItem('nlh_admin_seen_approvals');
+      if (approvalIds !== lastSeenApprovals) {
+        setShowAdminApprovalModal(true);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pendingApprovals.length, adminApprovalDismissed]);
 
   const handleApproveFlightHours = async (bookingId) => {
@@ -197,6 +222,9 @@ function AppContent() {
   const handleCloseAdminApprovalModal = () => {
     setShowAdminApprovalModal(false);
     setAdminApprovalDismissed(true);
+    // Remember which approvals the admin has already seen
+    const approvalIds = pendingApprovals.map(b => b.id).sort().join(',');
+    localStorage.setItem('nlh_admin_seen_approvals', approvalIds);
   };
 
   const handleOpenMessageCenter = () => {
@@ -213,6 +241,8 @@ function AppContent() {
   const markUserNotificationRead = async (notificationId) => {
     // Optimistically remove from local state first
     setUserNotifications(prev => prev.filter(item => item.id !== notificationId));
+    // Track as shown so it never pops up again even if DB update fails
+    setShownNotificationIds(prev => prev.includes(notificationId) ? prev : [...prev, notificationId]);
     
     if (!notificationId || !isSupabaseConfigured()) {
       return;
